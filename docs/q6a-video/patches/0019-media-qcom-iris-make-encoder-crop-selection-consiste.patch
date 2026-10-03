@@ -1,0 +1,108 @@
+From d09cb252b79896dc81a0f73a4c44918c203c9bf4 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:26:13 +0000
+Subject: [PATCH] media: qcom: iris: make encoder crop selection consistent
+
+The encoder selection API contradicted itself:
+
+ - VIDIOC_G_SELECTION reported CROP_BOUNDS and CROP_DEFAULT as the
+   aligned buffer size, e.g. 1920x1088 for a 1080p stream, and S_FMT
+   set the current crop to that same aligned size, but S_SELECTION
+   rejects anything larger than the real frame (1920x1080) with
+   -EINVAL. An application that sets the crop to the bounds it was
+   just told about, which is what generic code does, fails for every
+   height that is not a multiple of 32.
+ - S_SELECTION returned an error for an oversized or empty rectangle
+   instead of adjusting it, which is what V4L2 asks for.
+ - It could be called while streaming. The crop and the size derived
+   from it are sent to the firmware when streaming starts, so a later
+   change only leaves the driver and the firmware disagreeing about
+   the frame size.
+
+Report the visible frame size for bounds, default and the initial crop,
+adjust the requested rectangle into [minimum frame size, frame size]
+instead of failing, and return -EBUSY once either queue is streaming.
+The origin stays fixed at 0,0 as before.
+
+The hardware programming does not change: the crop offsets sent for the
+raw port already use min(crop, raw size), which is identical for the
+aligned and the visible size.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_venc.c | 25 ++++++++++++++------
+ drivers/media/platform/qcom/iris/iris_vidc.c |  5 ++--
+ 2 files changed, 21 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_venc.c b/drivers/media/platform/qcom/iris/iris_venc.c
+index a1acdc8b9..54764c28a 100644
+--- a/drivers/media/platform/qcom/iris/iris_venc.c
++++ b/drivers/media/platform/qcom/iris/iris_venc.c
+@@ -316,11 +316,11 @@ static int iris_venc_s_fmt_input(struct iris_inst *inst, struct v4l2_format *f)
+ 	inst->enc_scale_width = raw_width;
+ 	inst->enc_scale_height = raw_height;
+ 
+-	/* S_FMT resets the crop rectangle to the full negotiated buffer. */
++	/* S_FMT resets the crop rectangle to the full visible frame. */
+ 	inst->crop.top = 0;
+ 	inst->crop.left = 0;
+-	inst->crop.width = fmt->fmt.pix_mp.width;
+-	inst->crop.height = fmt->fmt.pix_mp.height;
++	inst->crop.width = raw_width;
++	inst->crop.height = raw_height;
+ 
+ 	ret = iris_venc_s_fmt_output(inst, output_fmt);
+ 	if (ret)
+@@ -377,17 +377,28 @@ int iris_venc_subscribe_event(struct iris_inst *inst,
+ 
+ int iris_venc_s_selection(struct iris_inst *inst, struct v4l2_selection *s)
+ {
++	struct platform_inst_caps *caps = inst->core->iris_platform_data->inst_caps;
++
+ 	if (s->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+ 		return -EINVAL;
+ 
+ 	switch (s->target) {
+ 	case V4L2_SEL_TGT_CROP:
++		/*
++		 * The crop and the encoded size are programmed into the firmware
++		 * when streaming starts, so they cannot change afterwards.
++		 */
++		if (vb2_is_streaming(v4l2_m2m_get_src_vq(inst->m2m_ctx)) ||
++		    vb2_is_streaming(v4l2_m2m_get_dst_vq(inst->m2m_ctx)))
++			return -EBUSY;
++
++		/* Only a crop anchored at the origin is supported. Adjust rather than fail. */
+ 		s->r.left = 0;
+ 		s->r.top = 0;
+-
+-		if (s->r.width > inst->enc_raw_width ||
+-		    s->r.height > inst->enc_raw_height)
+-			return -EINVAL;
++		s->r.width = clamp(s->r.width, min(caps->min_frame_width, inst->enc_raw_width),
++				   inst->enc_raw_width);
++		s->r.height = clamp(s->r.height, min(caps->min_frame_height, inst->enc_raw_height),
++				    inst->enc_raw_height);
+ 
+ 		inst->crop.left = s->r.left;
+ 		inst->crop.top = s->r.top;
+diff --git a/drivers/media/platform/qcom/iris/iris_vidc.c b/drivers/media/platform/qcom/iris/iris_vidc.c
+index 418cc8231..a06207c66 100644
+--- a/drivers/media/platform/qcom/iris/iris_vidc.c
++++ b/drivers/media/platform/qcom/iris/iris_vidc.c
+@@ -521,8 +521,9 @@ static int iris_g_selection(struct file *filp, void *fh, struct v4l2_selection *
+ 		switch (s->target) {
+ 		case V4L2_SEL_TGT_CROP_BOUNDS:
+ 		case V4L2_SEL_TGT_CROP_DEFAULT:
+-			s->r.width = inst->fmt_src->fmt.pix_mp.width;
+-			s->r.height = inst->fmt_src->fmt.pix_mp.height;
++			/* The visible frame, not the padded buffer */
++			s->r.width = inst->enc_raw_width;
++			s->r.height = inst->enc_raw_height;
+ 			break;
+ 		case V4L2_SEL_TGT_CROP:
+ 			s->r.width = inst->crop.width;
+-- 
+2.43.0
+

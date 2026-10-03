@@ -1,0 +1,156 @@
+From 4dad56614e86fe344e3681104a996bc8d31145ab Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:22:03 +0000
+Subject: [PATCH] media: qcom: iris: keep the IRQ thread off the registers once
+ power is off
+
+The threaded interrupt handler reads and clears the interrupt registers
+while holding core->lock. Nothing orders that against the runtime
+suspend path, which switches the clocks off without taking core->lock:
+if the thread is scheduled after the clocks are gone, the register read
+is an access to an unclocked block, which on Qualcomm SoCs is a
+synchronous external abort or a bus hang that takes the whole board
+down. The window is small but it is hit when the firmware raises its
+last interrupt just as the device goes idle, e.g. at the end of an
+encode.
+
+Upstream commit b9c2215bdedc ("media: qcom: iris: use disable_irq()
+during power-off") addresses this by calling disable_irq() at the end of
+iris_vpu_power_off(). That is not enough here and is risky:
+
+ - the clocks are already off by the time disable_irq() waits, so the
+   thread can still run while they are being torn down;
+ - iris_core_deinit() calls iris_vpu_power_off() with core->lock held,
+   and the IRQ thread blocks on core->lock before it can finish, so
+   disable_irq() would wait for a thread that waits for the caller.
+
+Gate the register access instead. Add a small spinlock and a flag that
+iris_vpu_power_on() sets once the registers are usable and
+iris_vpu_power_off() clears before it touches any clock. The thread only
+reads and clears the interrupt registers, and only processes responses,
+while the flag is set. Taking the spinlock in power-off also waits for a
+register access that is already in flight, without ever waiting for the
+thread itself, so it works with core->lock held.
+
+The disable/enable accounting is unchanged: the hard IRQ handler still
+disables the line, and the thread still re-enables it unless a watchdog
+interrupt was seen.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_core.h  |  4 ++++
+ .../platform/qcom/iris/iris_hfi_common.c      | 21 ++++++++++++++-----
+ drivers/media/platform/qcom/iris/iris_probe.c |  1 +
+ .../platform/qcom/iris/iris_vpu_common.c      | 15 +++++++++++++
+ 4 files changed, 36 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_core.h b/drivers/media/platform/qcom/iris/iris_core.h
+index 8b0629d57..c2145d172 100644
+--- a/drivers/media/platform/qcom/iris/iris_core.h
++++ b/drivers/media/platform/qcom/iris/iris_core.h
+@@ -73,6 +73,8 @@ struct qcom_ubwc_cfg_data;
+  * @hfi_sys_ops: iris HFI system ops
+  * @core_init_done: structure of signal completion for system response
+  * @intr_status: interrupt status
++ * @hw_lock: protects @hw_powered and the register accesses done by the IRQ thread
++ * @hw_powered: true while the VPU clocks and power domains are on
+  * @sys_error_handler: a delayed work for handling system fatal error
+  * @instances: a list_head of all instances
+  * @inst_fw_caps_dec: an array of supported instance capabilities by decoder
+@@ -119,6 +121,8 @@ struct iris_core {
+ 	struct completion			core_init_done;
+ 	struct completion			sys_error_done;
+ 	u32					intr_status;
++	spinlock_t				hw_lock; /* IRQ thread vs power off */
++	bool					hw_powered;
+ 	struct delayed_work			sys_error_handler;
+ 	struct list_head			instances;
+ 	/* encoder and decoder have overlapping caps, so two different arrays are required */
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_common.c b/drivers/media/platform/qcom/iris/iris_hfi_common.c
+index f807d22e1..ecae039fe 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_common.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_common.c
+@@ -126,17 +126,28 @@ irqreturn_t iris_hfi_isr(int irq, void *data)
+ irqreturn_t iris_hfi_isr_handler(int irq, void *data)
+ {
+ 	struct iris_core *core = data;
++	bool powered;
+ 
+ 	if (!core)
+ 		return IRQ_NONE;
+ 
+-	mutex_lock(&core->lock);
+-	pm_runtime_mark_last_busy(core->dev);
+-	iris_vpu_clear_interrupt(core);
+-	mutex_unlock(&core->lock);
++	/*
++	 * The clocks may be switched off while this thread is waiting to run.
++	 * Touching the interrupt registers then is a bus error, so only do it
++	 * while iris_vpu_power_off() has not yet marked the hardware as off.
++	 */
++	spin_lock(&core->hw_lock);
++	powered = core->hw_powered;
++	if (powered) {
++		pm_runtime_mark_last_busy(core->dev);
++		iris_vpu_clear_interrupt(core);
++	}
++	spin_unlock(&core->hw_lock);
+ 
+-	core->hfi_sys_ops->sys_hfi_response_handler(core);
++	if (powered)
++		core->hfi_sys_ops->sys_hfi_response_handler(core);
+ 
++	/* Pairs with the disable_irq_nosync() in iris_hfi_isr() */
+ 	if (!iris_vpu_watchdog(core, core->intr_status))
+ 		enable_irq(irq);
+ 
+diff --git a/drivers/media/platform/qcom/iris/iris_probe.c b/drivers/media/platform/qcom/iris/iris_probe.c
+index 2e7408ae6..d0fec92b1 100644
+--- a/drivers/media/platform/qcom/iris/iris_probe.c
++++ b/drivers/media/platform/qcom/iris/iris_probe.c
+@@ -236,6 +236,7 @@ static int iris_probe(struct platform_device *pdev)
+ 
+ 	core->state = IRIS_CORE_DEINIT;
+ 	mutex_init(&core->lock);
++	spin_lock_init(&core->hw_lock);
+ 	init_completion(&core->core_init_done);
+ 	init_completion(&core->sys_error_done);
+ 	complete_all(&core->sys_error_done);
+diff --git a/drivers/media/platform/qcom/iris/iris_vpu_common.c b/drivers/media/platform/qcom/iris/iris_vpu_common.c
+index 80c0681e5..e4476949b 100644
+--- a/drivers/media/platform/qcom/iris/iris_vpu_common.c
++++ b/drivers/media/platform/qcom/iris/iris_vpu_common.c
+@@ -231,6 +231,16 @@ void iris_vpu_power_off_hw(struct iris_core *core)
+ 
+ void iris_vpu_power_off(struct iris_core *core)
+ {
++	/*
++	 * Tell the IRQ thread that the registers are about to go away. Taking
++	 * the lock also waits for a register access that is already running.
++	 * Unlike disable_irq() this never waits for the thread itself, so it
++	 * is safe with core->lock held, which the IRQ thread also needs.
++	 */
++	spin_lock(&core->hw_lock);
++	core->hw_powered = false;
++	spin_unlock(&core->hw_lock);
++
+ 	iris_opp_set_rate(core->dev, 0);
+ 	core->iris_platform_data->vpu_ops->power_off_hw(core);
+ 	core->iris_platform_data->vpu_ops->power_off_controller(core);
+@@ -486,7 +496,12 @@ int iris_vpu_power_on(struct iris_core *core)
+ 	iris_vpu_set_preset_registers(core);
+ 
+ 	iris_vpu_interrupt_init(core);
++
++	spin_lock(&core->hw_lock);
+ 	core->intr_status = 0;
++	core->hw_powered = true;
++	spin_unlock(&core->hw_lock);
++
+ 	enable_irq(core->irq);
+ 
+ 	return 0;
+-- 
+2.43.0
+

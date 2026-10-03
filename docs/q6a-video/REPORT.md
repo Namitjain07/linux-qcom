@@ -17,7 +17,8 @@ Status: research complete, **no on-device test results yet**. Everything below c
 1. The VPU can encode: both the Gen1 and Gen2 SC7280 firmware images contain full H.264 and HEVC encoders (**P**).
 2. The best-supported way to use it is the kernel this repo builds — **Radxa `linux-7.0.11` with the Iris driver, the Gen2 firmware `vpu20_p1_gen2_s6.mbn`, and Hypervisor Override (EL2) enabled in UEFI**. Radxa's own merged PRs target exactly this for QCS6490 (**Q**), and EL2 sidesteps a documented secure-stream-ID crash class that affects the encode path in TrustZone mode (**P** mechanism, **S** for the reported reboot).
 3. **Scaling:** the VPU has a hardware scaler (VPSS) but it is only proven on the *decode* side and neither Venus nor Iris exposes it to userspace (**P**). Encoder-side scaling through Iris is *plausible* (separate raw / crop / coded sizes reach the firmware, and Radxa claims it works) but **unproven (U)** — a safe probe is provided. Until proven, scale on CPU/GPU and use the VPU only to encode.
-4. The two things most likely to be wrong on a system that "doesn't work": **(a)** the Gen2 firmware blob is missing or is the old MBNv7 blob, **(b)** the board is in default TrustZone mode and the encoder triggers a board reset.
+4. **Second pass (source review) — `FIXES.md`:** reading the Iris and Venus code end to end found real defects in loading, power/DMA, IRQ/teardown synchronisation and the encoder's resolution/scaling negotiation, none of which the first pass could see from history alone. A 25-commit series fixes them (PR `Namitjain07/kernel#1`, `patches/`). It is compile-tested, statically checked and partly reproduced in user space; **not run on hardware**. It does not change the recommendation: the unpatched Radxa 7.0.11 remains the first thing to test; the series is a candidate to apply if its symptoms appear or for hardening.
+5. The two things most likely to be wrong on a system that "doesn't work": **(a)** the Gen2 firmware blob is missing or is the old MBNv7 blob, **(b)** the board is in default TrustZone mode and the encoder triggers a board reset.
 
 **Confidence:** moderate. The mechanism and the configuration Radxa tests are well evidenced; whether *your* board's failure is (a), (b) or something else needs the on-device data this bundle collects.
 
@@ -104,7 +105,8 @@ Sizes are what `qcom_mdt_get_size()` returns (it rounds up to 4 KiB): Gen2 is **
 - Qualcomm: kernel-topics PR #1567 adds the same EL2 `video-firmware` node for Kodiak (PENDING); PR #1651 moves Iris/Venus to the generic PAS API (open); PR #1907 AHB-reset fix (open); `ubuntu-qcom-kernel` PR #118 "Iris encoder feature enhancements" was tested on **SM8650**, not SC7280.
 - Radxa `linux-7.0.11` already carries the Qualcomm DMA-coherency, power-off-ordering and frame-interval fixes plus Radxa's encoder hardening (`87c604bff` Gen1 joined headers, `08282c7c5` visible-vs-aligned frame size, `4fef0d63f` force keyframe, `2ac17acf5` padded NV12, `d655943bf` empty Gen2 drain, `038eff48c` SC8280XP header prepend).
 
-### 4.6 Upstream Iris fixes NOT in Radxa 7.0.11 (candidates for Phase 6)
+### 4.6 Upstream Iris fixes NOT in Radxa 7.0.11 (now handled — see `FIXES.md` §1 and `HISTORY.md` §4)
+Disposition: `0ac05c4d9f` applied; `f87d7eda07` and `75d79879ec` adapted; **`b9c2215bde` deliberately replaced** (on this tree its `disable_irq()` runs with `core->lock` held and can deadlock; the replacement also orders the register gate before the clocks go off); `727a87c71b` is dead code here; `75126861e6` untouched. The paragraph below is the original (pre-series) candidate list.
 `0ac05c4d9f` `iris_allow_cmd()` bitmask test · `b9c2215bde` `disable_irq()` at power-off (stable) · `f87d7eda07` runtime-PM reference leaks (stable) · `75d79879ec` resume-failure handling in core deinit · `727a87c71b` duplicate `HFI_PROP_OPB_ENABLE` · `75126861e6` missing `break` (harmless today). Pending, unmerged: kernel-topics #1907.
 Confirmed present in Radxa's tree: the `iris_allow_cmd` bug (`iris_state.c:273-277`) and `disable_irq_nosync` (`iris_vpu_common.c:240`).
 
@@ -131,6 +133,8 @@ Alternatives considered:
 3. Does `v4l2-enc-probe` show the coded size staying smaller than the raw size? If yes, does a *streamed* test actually produce a scaled stream? (needs a streaming extension — Plan Phase 5)
 4. Do repeated open/close cycles produce SMMU faults (Radxa PR #593 mentions teardown IOMMU faults)?
 5. Is the forum-reported reboot reproducible in TZ mode with correct firmware? (S → P)
+6. Does the patched driver pass `tools/v4l2-enc-neg-test` and the idle/suspend loop (G§13) without `timed out`/`watchdog`/SMMU lines? In particular patch 13 (IRQ gate) is untested.
+7. What is the output bitrate vs target with Gen1 and Gen2 firmware? Iris hands the firmware nanosecond timestamps, Venus microseconds (`FIXES.md` §5); only a measurement settles whether that matters.
 
 ## 7. Corrections made during the research (so you can trust the rest)
 | Earlier statement | Status |
@@ -140,5 +144,8 @@ Alternatives considered:
 | "The encoder path has no scaler" | **Weakened** to unproven (absence of strings ≠ proof) |
 | A search summary said the Qualcomm series "adds `dma_sync` calls" | **Wrong**; the commits only add the `dma-coherent` property |
 | A first PSNR check scored a perfect encode at ~29 dB | **Fixed**: frames were paired by timestamp; now by index (see `tools/encode-validate.sh`) |
+| "Phase 6 candidate: Gen2→Gen1 fallback on size/auth failure" | **Replaced** by a diagnostic (patch 23); a silent fallback would hide a mis-sized carveout |
+| "`b9c2215bde` is a safe stable fix to take" | **Revised**: safe upstream, but on Radxa's tree it can deadlock (`core->lock`) and waits after the clocks are off; replaced by patch 13 (locking model in `tests/irq-model`) |
+| "No kernel patch has been compiled" | **Superseded**: the series builds per commit with clang 18, `W=1`; still not run on hardware |
 
 See `EVIDENCE.md` for the claim-by-claim ledger and re-check commands, `PLAN.md` for the plan and `GUIDE.md` for the runbook.

@@ -1,0 +1,56 @@
+From 943bae2791c6ff06a2f056edb810d6b8bf4ec46d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:22:56 +0000
+Subject: [PATCH] media: qcom: iris: bound the wait for system error recovery
+
+iris_wait_for_sys_error() waited for sys_error_done with no timeout. It
+is called from close() and from stop_streaming() before any instance
+lock is taken. After a firmware system error the recovery runs from a
+delayed work item that has to reset the firmware through the secure
+world and tear the core down; if that work never completes, or never
+gets to run, every process that touches the video node afterwards hangs
+in uninterruptible sleep and cannot be killed, which also blocks module
+unload and shutdown.
+
+Wait for at most five seconds, which is several times longer than the
+slowest firmware response timeout, and log if it expires so the failure
+is visible instead of silent.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_core.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_core.c b/drivers/media/platform/qcom/iris/iris_core.c
+index af9bd68f9..d4ab45500 100644
+--- a/drivers/media/platform/qcom/iris/iris_core.c
++++ b/drivers/media/platform/qcom/iris/iris_core.c
+@@ -12,6 +12,8 @@
+ #include "iris_state.h"
+ #include "iris_vpu_common.h"
+ 
++#define IRIS_SYS_ERROR_TIMEOUT_MS	(5 * HW_RESPONSE_TIMEOUT_VALUE)
++
+ void iris_core_deinit(struct iris_core *core)
+ {
+ 	int ret;
+@@ -77,7 +79,14 @@ void iris_core_deinit_on_error(struct iris_core *core)
+ 
+ void iris_wait_for_sys_error(struct iris_core *core)
+ {
+-	wait_for_completion(&core->sys_error_done);
++	/*
++	 * Recovery runs from a work item that has to talk to the secure world
++	 * and the firmware. Do not let a recovery that never completes turn
++	 * close() or STREAMOFF into a task that can neither finish nor be killed.
++	 */
++	if (!wait_for_completion_timeout(&core->sys_error_done,
++					 msecs_to_jiffies(IRIS_SYS_ERROR_TIMEOUT_MS)))
++		dev_err(core->dev, "timed out waiting for system error recovery\n");
+ }
+ 
+ static int iris_wait_for_system_response(struct iris_core *core)
+-- 
+2.43.0
+

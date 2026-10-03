@@ -1,0 +1,287 @@
+sha	date	author	subject
+8afb9283017	2026-08-17	Daniel Baluta	media: iris: Guard the QCOM_UBWC_CONFIG select with QCOM_SMEM
+6eec0f9b5c3	2026-07-10	Gourav Kumar	media: iris: disable time-delta-based rate control for VBR
+a9aba94a7ba	2026-07-06	Alexander Koskovich	media: iris: Add support for Milos (VPU v2.0)
+6f62dcefd24	2026-07-23	Wangao Wang	media: qcom: iris: Add request key frame support for encoder
+412a2e5955e	2026-06-10	Dikshita Agarwal	media: iris: Add Gen2 firmware autodetect and fallback
+4bf9ae6229a	2026-06-07	Mohammed EL Kadiri	media: venus: Annotate flex arrays with __counted_by()
+b9c2215bded	2026-06-30	Hungyu Lin	media: qcom: iris: use disable_irq() during power-off
+f5daac6eff7	2026-06-08	Hungyu Lin	media: qcom: iris: initialize OPP pointer at declaration
+75d79879ec3	2026-06-04	Hungyu Lin	media: qcom: iris: handle runtime PM resume failure in core deinit
+14634f3161e	2026-06-04	Hungyu Lin	media: qcom: venus: add callback parameter names
+94ef75095d5	2026-06-02	Bryan O'Donoghue	media: iris: Enumerate cap->bus_info to differentiate between encoder and decoder
+d2f0ebbcde0	2026-05-31	Dikshita Agarwal	media: qcom: iris: Make iris_destroy_internal_buffer() return void
+75126861e6a	2026-05-31	Dikshita Agarwal	media: qcom: iris: Add missing break in iris_hfi_gen2_session_set_codec()
+727a87c71b4	2026-05-31	Dikshita Agarwal	media: qcom: iris: Remove duplicate HFI_PROP_OPB_ENABLE entry
+f6afe7ffb29	2026-05-31	Dikshita Agarwal	media: qcom: iris: Remove dead assignment in iris_hfi_gen2_set_tier()
+0ac05c4d9f1	2026-05-31	Dikshita Agarwal	media: qcom: iris: Fix bitmask test in iris_allow_cmd()
+e1fb54b437c	2026-05-31	Dikshita Agarwal	media: qcom: iris: Centralize internal buffer table selection
+bd595b745eb	2026-06-10	Mohammed EL Kadiri	media: venus: fix payload size calculation in parse_raw_formats()
+a51cea23e40	2026-06-10	Mohammed EL Kadiri	media: venus: fix payload size returned by parse_caps() and parse_alloc_mode()
+5eebacbc9a3	2026-07-23	Wangao Wang	media: qcom: iris: fix missing hfi_id in gen1 GOP_SIZE cap
+f87d7eda07f	2026-06-08	Hungyu Lin	media: qcom: iris: fix runtime PM reference leaks
+460d3257a6d	2026-05-31	Dikshita Agarwal	media: qcom: iris: fix state-change debug log printing stale value
+c19f5b0a979	2026-06-29	Ricardo Ribalda	media: iris: Replace ternary conditionals with max()
+65c06d2edde	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: allow GEN2 decoding into 10bit format
+20c3ef4c7ca	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: update find_format to handle 8bit and 10bit formats
+2f2f76d4331	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: update size and stride calculations for 10bit formats
+3ea0343c09b	2026-06-02	Neil Armstrong	media: qcom: iris: gen2: add support for 10bit decoding
+7aa4969dd9a	2026-06-02	Neil Armstrong	media: qcom: iris: add QC10C & P010 buffer size calculations
+7d460ca3917	2026-06-02	Neil Armstrong	media: qcom: iris: add helpers for 8bit and 10bit formats
+10400b9455e	2026-06-02	Bryan O'Donoghue	media: qcom: iris: Fix FPS calculation and VPP FW overhead
+3395d752638	2026-05-29	Dikshita Agarwal	media: iris: Initialize HFI ops after firmware load in core init
+56f93da11a7	2026-05-29	Dmitry Baryshkov	media: iris: drop struct iris_fmt
+f014f5bec08	2026-05-29	Wangao Wang	media: iris: Add platform data for X1P42100
+4147ffa3d96	2026-05-29	Wangao Wang	media: iris: Add hardware power on/off ops for X1P42100
+d1c9f40f764	2026-05-14	Vishnu Reddy	media: iris: optimize COMV buffer allocation for VPU3x and VPU4x
+5c66647a5c3	2026-04-01	Vishnu Reddy	media: iris: add FPS calculation and VPP FW overhead in frequency formula
+d5e3f2b961d	2026-05-12	Wangao Wang	media: qcom: iris: Simplify COMV size calculation
+df5418d5f96	2026-05-12	Wangao Wang	media: qcom: iris: Optimize iris_hfi_gen1_packet_session_set_property
+e0507d45b3c	2026-05-12	Wangao Wang	media: qcom: iris: Add hierarchical coding support for encoder
+e4d067d5e99	2026-05-12	Wangao Wang	media: qcom: iris: Add B frames support for encoder
+6870381285b	2026-05-12	Wangao Wang	media: qcom: iris: Add Long-Term Reference support for encoder
+89797288272	2026-05-12	Wangao Wang	media: qcom: iris: Add intra refresh support for gen1 encoder
+45ac2230f92	2026-05-29	Dmitry Baryshkov	media: iris: Fix use IRQF_NO_AUTOEN when requesting the IRQ
+197789c60a1	2026-05-26	André Apitzsch	media: qcom: venus: Add msm8939 resource struct
+cc41341d120	2026-05-26	Erikas Bitovtas	media: qcom: venus: add codec blacklist mechanism
+86a366c02dd	2026-05-26	Erikas Bitovtas	media: qcom: venus: add power domain enable logic for Venus cores
+c53e0550288	2026-03-31	Renjiang Han	media: qcom: venus: relax encoder frame/blur step size on v6
+35428ae3a6a	2026-03-31	Renjiang Han	media: qcom: venus: relax encoder frame/blur dimension steps on v4
+e1c9adabb26	2026-03-31	Renjiang Han	media: qcom: venus: drop extra padding in NV12 raw size calculation
+2c7fe9db118	2026-03-29	Dmitry Baryshkov	media: qcom: iris: extract firmware description data
+96360a89419	2026-03-29	Dmitry Baryshkov	media: qcom: iris: use new firmware name for SM8250
+53a5e095636	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split platform data from firmware data
+95faed0b9f5	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split firmware_data from raw platform data
+10175bca76e	2026-03-29	Dmitry Baryshkov	media: qcom: iris: drop hw_response_timeout_val from platform data
+c8f12e754ee	2026-03-29	Dmitry Baryshkov	media: qcom: iris: move get_instance to iris_hfi_sys_ops
+d8a6a63372b	2026-03-29	Dmitry Baryshkov	media: qcom: iris: merge hfi_response_ops and hfi_command_ops
+35da0884068	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split HFI session ops from core ops
+c61331d2409	2026-03-29	Dmitry Baryshkov	media: qcom: iris: don't use function indirection in gen2-specific code
+8550eebfca3	2026-03-29	Dmitry Baryshkov	media: qcom: iris: use common set_preset_registers function
+335cdc4c43a	2026-03-29	Dmitry Baryshkov	media: qcom: iris: drop pas_id from the iris_platform_data struct
+8f100f5896e	2026-03-27	Dmitry Baryshkov	media: qcom: venus: flip the venus/iris switch
+f45fd3dbb5f	2026-02-09	Dmitry Baryshkov	media: venus: scale MMCX power domain on SM8250
+4170e2f25ce	2026-02-09	Dmitry Baryshkov	media: iris: scale MMCX power domain on SM8250
+28d2ab064df	2026-01-25	Dmitry Baryshkov	media: iris: drop remnants of UBWC configuration
+59d1b40ce3d	2026-01-25	Dmitry Baryshkov	media: iris: don't specify max_channels in the source code
+838dcd80db9	2026-01-25	Dmitry Baryshkov	media: iris: don't specify bank_spreading in the source code
+8f1a4226dfb	2026-01-25	Dmitry Baryshkov	media: iris: don't specify ubwc_swizzle in the source code
+68b41e1aaeb	2026-01-25	Dmitry Baryshkov	media: iris: don't specify highest_bank_bit in the source code
+0c2bc74465c	2026-01-25	Dmitry Baryshkov	media: iris: don't specify min_acc_length in the source code
+c4320755386	2026-01-25	Dmitry Baryshkov	media: iris: retrieve UBWC platform configuration
+3e0b2053751	2026-03-27	Dmitry Baryshkov	media: qcom: iris: increase H265D_MAX_SLICE to fix H.265 decoding on SC7280
+3d9593ad1a5	2026-03-05	Vishnu Reddy	media: iris: fix use-after-free of fmt_src during MBPF check
+95a337f92f0	2026-03-13	Vikash Garodia	media: iris: switch to hardware mode after firmware boot
+4a49ae56b0e	2026-02-13	Thomas Fourier	media: iris: Fix dma_free_attrs() size in iris_hfi_queues_init()
+f27cfdcfc91	2026-02-16	Dikshita Agarwal	media: iris: Fix use-after-free in iris_release_internal_buffers()
+a297c5165f9	2026-02-05	Arnd Bergmann	media: iris: fix QCOM_MDT_LOADER dependency
+aa23c94cc43	2026-03-30	Arnd Bergmann	media: venus: fix QCOM_MDT_LOADER dependency
+dde659d3703	2025-12-10	Vikash Garodia	media: iris: Introduce vpu ops for vpu4 with necessary hooks
+82b96a8d8d6	2025-12-10	Vikash Garodia	media: iris: Move vpu35 specific api to common to use for vpu4
+2fc9b85dea5	2025-12-10	Vikash Garodia	media: iris: Move vpu register defines to common header file
+df816dce1b0	2025-12-10	Vikash Garodia	media: iris: Introduce buffer size calculations for vpu4
+dff99dff6c3	2025-12-10	Vikash Garodia	media: iris: Add support for multiple TZ content protection(CP) configs
+8744df0e894	2025-12-10	Vikash Garodia	media: iris: Add support for multiple clock sources
+5ef0832c6e4	2025-11-14	Wangao Wang	media: qcom: iris: Add intra refresh support for encoder
+874eca6d309	2025-11-14	Wangao Wang	media: qcom: iris: Add flip support for encoder
+49a940f37de	2025-11-14	Wangao Wang	media: qcom: iris: Add rotation support for encoder
+121d6d7a351	2025-11-14	Wangao Wang	media: qcom: iris: Add scale support for encoder
+0708f305d6f	2025-11-14	Wangao Wang	media: qcom: iris: Improve crop_offset handling for encoder
+d9967fa37ca	2025-11-14	Wangao Wang	media: qcom: iris: Improve format alignment for encoder
+9adfb1ba701	2025-11-10	Vishnu Reddy	media: iris: Change psc properties message to debug level
+3f9b5c1ccd4	2025-12-23	Ricardo Ribalda	media: iris: Document difference in size during allocation
+2c73cfd0cfc	2025-12-29	Vishnu Reddy	media: iris: Prevent output buffer queuing before stream-on completes
+9aa8d63d09c	2025-12-29	Dikshita Agarwal	media: iris: gen2: Add sanity check for session stop
+1dabf00ee20	2025-12-29	Dikshita Agarwal	media: iris: gen1: Destroy internal buffers after FW releases
+811dbc546f4	2025-12-29	Dikshita Agarwal	media: iris: Skip resolution set on first IPSC
+2d0bbd982df	2025-12-29	Dikshita Agarwal	media: iris: Add buffer to list only after successful allocation
+bbef55f4141	2025-12-18	Dikshita Agarwal	media: iris: Add missing platform data entries for SM8750
+8fc707d13df	2025-11-02	Dikshita Agarwal	media: iris: remove v4l2_m2m_ioctl_{de,en}coder_cmd API usage during STOP handling
+4980721cb97	2025-12-25	Val Packett	media: iris: use fallback size when S_FMT is called without width/height
+71fe80364a6	2025-12-23	Ricardo Ribalda	media: iris: Fix fps calculation
+89f7cf35901	2025-10-06	Vishnu Reddy	media: iris: Fix ffmpeg corrupted frame error
+66c744e28b6	2025-11-26	Jorge Ramirez-Ortiz	media: venus: assign unique bus_info strings for encoder and decoder
+63c072e2937	2025-11-25	Dikshita Agarwal	media: venus: vdec: restrict EOS addr quirk to IRIS2 only
+93ecd6ee95c	2025-12-11	Renjiang Han	media: venus: vdec: fix error state assignment for zero bytesused
+819fcf05543	2025-12-10	Deepa Guthyappa Madivalara	media: iris: Add internal buffer calculation for AV1 decoder
+2af481a459a	2025-12-10	Deepa Guthyappa Madivalara	media: iris: Define AV1-specific platform capabilities and properties
+10ac84abd48	2025-12-10	Deepa Guthyappa Madivalara	media: iris: Add support for AV1 format in iris decoder
+fbcc2150aa4	2025-04-25	Kees Cook	media: iris: Cast iris_hfi_gen2_get_instance() allocation type
+ad699fa78b5	2025-10-27	Wangao Wang	media: iris: Add sanity check for stop streaming
+aec75e355c6	2025-11-05	Dikshita Agarwal	media: iris: Refine internal buffer reconfiguration logic for resolution change
+e81b60c4a88	2025-10-26	Laurent Pinchart	media: iris: Constify iris_v4l2_file_ops
+542e3540ddd	2025-10-28	Dmitry Baryshkov	media: iris: enable support for SC7280 platform
+3b72f5e206e	2025-10-28	Dmitry Baryshkov	media: iris: rename sm8250 platform file to gen1
+69dfada4c9d	2025-10-28	Dmitry Baryshkov	media: iris: remove duplication between generic gen2 data and qcs8300
+6c67d1cf18d	2025-10-28	Dmitry Baryshkov	media: iris: stop encoding PIPE value into fw_caps
+7a02a8b9841	2025-10-28	Dmitry Baryshkov	media: iris: turn platform data into constants
+e5894eeefde	2025-10-28	Dmitry Baryshkov	media: iris: turn platform caps into constants
+456c99da41c	2025-10-08	Dikshita Agarwal	media: iris: Add support for QC08C format for encoder
+cfd71b14b0d	2025-10-08	Dikshita Agarwal	media: iris: Add support for QC08C format for decoder
+7c1f3bd58fa	2025-10-08	Dikshita Agarwal	media: iris: Add support for HFI_PROP_OPB_ENABLE to control split mode
+bcaaa08dda6	2025-10-17	Johan Hovold	media: venus: drop unused module aliases
+6e971cfe62e	2025-10-17	Johan Hovold	media: venus: drop bogus probe deferrals
+81775c25b48	2025-10-15	Laurent Pinchart	media: qcom: venus: Drop unneeded v4l2_m2m_get_vq() NULL check
+9fec05f5739	2025-10-15	Laurent Pinchart	media: qcom: iris: Drop unneeded v4l2_m2m_get_vq() NULL check
+afb100a5ea7	2025-09-18	Renjiang Han	media: venus: pm_helpers: add fallback for the opp-table
+a5925a2ce07	2025-09-02	Neil Armstrong	media: iris: add VPU33 specific encoding buffer calculation
+75db90ae067	2025-08-25	Dikshita Agarwal	media: iris: Add support for drain sequence in encoder video device
+8cefa0ac93a	2025-08-25	Dikshita Agarwal	media: iris: Add support for buffer management ioctls for encoder device
+61528e86687	2025-08-25	Dikshita Agarwal	media: iris: Allocate and queue internal buffers for encoder video device
+d22037f3fd3	2025-08-25	Dikshita Agarwal	media: iris: Set platform capabilities to firmware for encoder video device
+92e007ca5ab	2025-08-25	Dikshita Agarwal	media: iris: Add V4L2 streaming support for encoder video device
+6bdfa3f947a	2025-08-25	Dikshita Agarwal	media: iris: Add platform-specific capabilities for encoder video device
+4ff586ff28e	2025-09-03	Dikshita Agarwal	media: iris: Add support for G/S_PARM for encoder video device
+bed072b48e0	2025-08-25	Dikshita Agarwal	media: iris: Add support for G/S_SELECTION for encoder video device
+f4d3867e054	2025-08-25	Dikshita Agarwal	media: iris: Add encoder support for V4L2 event subscription
+87551d96e89	2025-08-25	Dikshita Agarwal	media: iris: Add support for VIDIOC_QUERYCAP for encoder video device
+a6882431a13	2025-08-25	Dikshita Agarwal	media: iris: Add support for ENUM_FRAMESIZES/FRAMEINTERVALS for encoder
+63357cf8a9c	2025-08-25	Dikshita Agarwal	media: iris: Add support for ENUM_FMT, S/G/TRY_FMT encoder
+5ad964ad565	2025-08-25	Dikshita Agarwal	media: iris: Initialize and deinitialize encoder instance structure
+787c535a9ff	2025-08-25	Dikshita Agarwal	media: iris: Add support for video encoder device
+2dbd2645c07	2025-08-25	Dikshita Agarwal	media: iris: Fix format check for CAPTURE plane in try_fmt
+8172f57746d	2025-08-25	Dikshita Agarwal	media: iris: Fix missing LAST flag handling during drain
+dec073dd845	2025-08-25	Dikshita Agarwal	media: iris: Send dummy buffer address for all codecs during drain
+56a2d85ee8f	2025-08-25	Dikshita Agarwal	media: iris: Allow stop on firmware only if start was issued.
+0fe10666d3b	2025-08-25	Dikshita Agarwal	media: iris: Simplify session stop logic by relying on vb2 checks
+8a432174ac2	2025-08-25	Dikshita Agarwal	media: iris: Update vbuf flags before v4l2_m2m_buf_done
+9cae3619e46	2025-08-25	Dikshita Agarwal	media: iris: Always destroy internal buffers on firmware release response
+65f72c6a8d9	2025-08-25	Dikshita Agarwal	media: iris: Allow substate transition to load resources during output streaming
+4b67ef9b333	2025-08-25	Dikshita Agarwal	media: iris: Fix port streaming handling
+02a24f13b3a	2025-08-25	Dikshita Agarwal	media: iris: Fix memory leak by freeing untracked persist buffer
+42e81c262cf	2025-08-25	Dikshita Agarwal	media: iris: Report unreleased PERSIST buffers on session close
+cba6aed4223	2025-08-25	Dikshita Agarwal	media: iris: Fix buffer count reporting in internal buffer check
+57429b0fddf	2025-08-18	Stephan Gerhold	media: iris: Fix firmware reference leak and unmap memory after load
+dbd57932f8d	2025-09-02	Krzysztof Kozlowski	media: iris: Add support for SM8750 (VPU v3.5)
+1f01a49816a	2025-08-04	Krzysztof Kozlowski	media: iris: Split power on per variants
+2fbb823a074	2025-07-02	Krzysztof Kozlowski	media: iris: Call correct power off callback in cleanup path
+93fad55aa99	2025-08-22	Dikshita Agarwal	media: iris: vpu3x: Add MNoC low power handshake during hardware power-off
+fde38008fc4	2025-08-22	Neil Armstrong	media: iris: fix module removal if firmware download failed
+fc2aaf2d93a	2025-08-14	Jorge Ramirez-Ortiz	media: venus: core: Add qcm2290 DT compatible and resource data
+a9551290ef3	2025-08-14	Jorge Ramirez-Ortiz	media: venus: core: Sort dt_match alphabetically.
+7998681eb7f	2025-08-14	Jorge Ramirez-Ortiz	media: venus: hfi_plat_v4: Add capabilities for the 4XX lite core
+ba4fdff9201	2025-08-14	Jorge Ramirez-Ortiz	media: venus: Add framework support for AR50_LITE video core
+85c853b7043	2025-08-14	Jorge Ramirez-Ortiz	media: venus: Define minimum valid firmware version
+93f213b444a	2025-08-20	Stephan Gerhold	media: venus: firmware: Use correct reset sequence for IRIS2
+32eab518110	2025-08-10	Laurent Pinchart	media: qcom: venus: Pass file pointer to venus_close_common()
+99c41425264	2025-08-10	Laurent Pinchart	media: qcom: iris: Drop unused argument to iris_get_inst()
+61a08386dcf	2025-08-10	Laurent Pinchart	media: qcom: iris: Set file->private_data in iris_v4l2_fh_(de)init()
+c284b5ab97a	2025-08-10	Laurent Pinchart	media: qcom: iris: Pass file pointer to iris_v4l2_fh_(de)init()
+7881cd6886a	2025-08-05	Sasha Levin	media: venus: Fix OPP table error handling
+f6940b79fcb	2025-06-11	Akhil P Oommen	media: iris: Fix opp scaling of power domains
+478c4478610	2025-05-09	Dikshita Agarwal	media: iris: Add codec specific check for VP9 decoder drain handling
+e1f5d32608e	2025-05-09	Dikshita Agarwal	media: iris: Add internal buffer calculation for HEVC and VP9 decoders
+820ac7fe279	2025-05-09	Dikshita Agarwal	media: iris: Set mandatory properties for HEVC and VP9 decoders.
+f44ef2d4058	2025-05-09	Dikshita Agarwal	media: iris: Add platform capabilities for HEVC and VP9 decoders
+fde6161d91b	2025-05-09	Dikshita Agarwal	media: iris: Add HEVC and VP9 formats for decoder
+c7501fa5fb8	2025-05-09	Dikshita Agarwal	media: iris: Add a comment to explain usage of MBPS
+0aebab4968e	2025-05-09	Dikshita Agarwal	media: iris: Remove redundant buffer count check in stream off
+f15cb8652b4	2025-05-09	Dikshita Agarwal	media: iris: Improve last flag handling
+ac72ad9deaf	2025-05-09	Dikshita Agarwal	media: iris: Add handling for no show frames
+b791dcfcba3	2025-05-09	Dikshita Agarwal	media: iris: Add handling for corrupt and drop frames
+b7a898184e7	2025-05-09	Dikshita Agarwal	media: iris: Remove unnecessary re-initialization of flush completion
+1e27e9ffce5	2025-05-09	Dikshita Agarwal	media: iris: Skip flush on first sequence change
+7adc11e6abf	2025-05-09	Dikshita Agarwal	media: iris: Send V4L2_BUF_FLAG_ERROR for capture buffers with 0 filled length
+91c6d55b477	2025-05-09	Dikshita Agarwal	media: iris: Fix buffer preparation failure during resolution change
+9bf58db1571	2025-05-09	Dikshita Agarwal	media: iris: Track flush responses to prevent premature completion
+58edc8a68de	2025-05-09	Dikshita Agarwal	media: iris: Fix typo in depth variable
+0f837559ccd	2025-05-09	Dikshita Agarwal	media: iris: Fix NULL pointer dereference
+c314a28cdab	2025-05-09	Dikshita Agarwal	media: iris: Fix missing function pointer initialization
+a693b4a3e7a	2025-05-09	Dikshita Agarwal	media: iris: Remove deprecated property setting to firmware
+03e29ab0e94	2025-05-09	Dikshita Agarwal	media: iris: Remove error check for non-zero v4l2 controls
+2781662dee7	2025-05-09	Dikshita Agarwal	media: iris: Prevent HFI queue writes when core is in deinit state
+f3516f856d1	2025-05-09	Dikshita Agarwal	media: iris: Drop port check for session property response
+caf20554876	2025-05-09	Dikshita Agarwal	media: iris: Avoid updating frame size to firmware during reconfig
+8aadfd44537	2025-05-09	Dikshita Agarwal	media: iris: Update CAPTURE format info based on OUTPUT format
+d2abb1ff5a3	2025-05-09	Dikshita Agarwal	media: iris: Verify internal buffer release on close
+7c452ffda30	2025-05-09	Dikshita Agarwal	media: iris: Skip destroying internal buffer if not dequeued
+ee3b94f2263	2025-05-31	Konrad Dybcio	media: venus: Fix MSM8998 frequency table
+640803003cd	2025-06-19	Jorge Ramirez-Ortiz	media: venus: hfi: explicitly release IRQ during teardown
+06d6770ff0d	2025-05-19	Vedang Nagar	media: venus: Fix OOB read due to missing payload bound check
+49befc830da	2025-05-19	Vedang Nagar	media: venus: Add a check for packet size after reading from shared memory
+3200144a2fa	2025-06-06	Jorge Ramirez-Ortiz	media: venus: protect against spurious interrupts during probe
+b179234b5e5	2025-06-12	Renjiang Han	media: venus: pm_helpers: use opp-table for the frequency
+c056064a207	2025-06-16	Ricardo Ribalda	media: venus: vdec: Make the range of us_per_frame explicit
+3a905e52c97	2025-06-16	Ricardo Ribalda	media: venus: venc: Make the range of us_per_frame explicit
+417c01b92ec	2025-06-16	Ricardo Ribalda	media: venus: venc: Clamp param smaller than 1fps and bigger than 240
+377dc500d25	2025-06-16	Ricardo Ribalda	media: venus: vdec: Clamp param smaller than 1fps and bigger than 240.
+146eadf3d1e	2025-04-24	Vikash Garodia	media: iris: add qcs8300 platform data
+6490cf16537	2025-04-24	Vikash Garodia	media: iris: fix the order of compat strings
+cae67e94e46	2025-04-17	Neil Armstrong	media: platform: qcom/iris: add sm8650 support
+dc40021c13d	2025-04-17	Neil Armstrong	media: platform: qcom/iris: rename platform_sm8550 to platform_gen2
+02083a1e00a	2025-04-17	Neil Armstrong	media: platform: qcom/iris: add support for vpu33
+9cd2b62c8c2	2025-04-17	Neil Armstrong	media: platform: qcom/iris: rename iris_vpu3 to iris_vpu3x
+322e9061edc	2025-04-17	Neil Armstrong	media: platform: qcom/iris: introduce optional controller_rst_tbl
+c69df5de4ac	2025-04-17	Neil Armstrong	media: platform: qcom/iris: add power_off_controller to vpu_ops
+14423fc3a4a	2025-02-18	Renjiang Han	media: venus: pm_helpers: add compatibility for dev_pm_genpd_set_hwmode on V4
+b588898880b	2025-02-27	Renjiang Han	media: venus: vdec: queue dpb buffers to firmware for video seek
+523cea3a19f	2025-03-27	Loic Poulain	media: venus: Fix probe error handling
+e68c3c50a73	2025-02-17	Dan Carpenter	media: iris: fix error code in iris_load_fw_to_memory()
+8e172e38a62	2024-07-25	Nas Chung	media: qcom: venus: Fix uninitialized variable warning
+f4b211714bc	2025-02-20	Vikash Garodia	media: venus: hfi: add a check to handle OOB in sfr region
+69baf245b23	2025-02-20	Vikash Garodia	media: venus: hfi: add check to handle incorrect queue size
+9edaaa8e3e1	2025-02-20	Vikash Garodia	media: venus: hfi_parser: refactor hfi packet parsing logic
+172bf5a9ef7	2025-02-20	Vikash Garodia	media: venus: hfi_parser: add check to avoid out of bound access
+a21766b5185	2025-02-19	Arnd Bergmann	media: iris: rename module file
+79865252acb	2025-02-07	Dikshita Agarwal	media: iris: enable video driver probe of SM8250 SoC
+547f7b8c509	2025-02-07	Vedang Nagar	media: iris: add check to allow sub states transitions
+ef0baf36f72	2025-02-07	Vedang Nagar	media: iris: implement power scaling for vpu2 and vpu3
+bdbe1cac0c1	2025-02-07	Vedang Nagar	media: iris: add check whether the video session is supported or not
+d09100763be	2025-02-07	Dikshita Agarwal	media: iris: add support for drain sequence
+c1f8b2cc72e	2025-02-07	Dikshita Agarwal	media: iris: handle streamoff/on from client in dynamic resolution change
+84e17adae3e	2025-02-07	Dikshita Agarwal	media: iris: add support for dynamic resolution change
+17f2a485ca6	2025-02-07	Dikshita Agarwal	media: iris: implement vb2 ops for buf_queue and firmware response
+73702f45db8	2025-02-07	Dikshita Agarwal	media: iris: allocate, initialize and queue internal buffers
+025398e9121	2025-02-07	Vedang Nagar	media: iris: subscribe parameters and properties to firmware for hfi_gen2
+3a19d7b9e08	2025-02-07	Vedang Nagar	media: iris: implement set properties to firmware during streamon
+11712ce70f8	2025-02-07	Dikshita Agarwal	media: iris: implement vb2 streaming ops
+1dc5c9700fc	2025-02-07	Vedang Nagar	media: iris: implement query_cap ioctl
+33be1dde17e	2025-02-07	Dikshita Agarwal	media: iris: implement iris v4l2_ctrl_ops
+5c1418b8e9b	2025-02-07	Vedang Nagar	media: iris: implement subscribe_event and unsubscribe_event ioctls
+fb1417ed727	2025-02-07	Vedang Nagar	media: iris: implement enum_fmt and enum_framesizes ioctls
+402109e02f7	2025-02-07	Vedang Nagar	media: iris: implement g_selection ioctl
+b530b95de22	2025-02-07	Vedang Nagar	media: iris: implement s_fmt, g_fmt and try_fmt ioctls
+38fc8beaba5	2025-02-07	Dikshita Agarwal	media: iris: implement reqbuf ioctl with vb2_queue_setup
+bb8a95aa038	2025-02-07	Dikshita Agarwal	media: iris: implement power management
+fb583a21433	2025-02-07	Dikshita Agarwal	media: iris: introduce host firmware interface with necessary hooks
+abf5bac63f6	2025-02-07	Dikshita Agarwal	media: iris: implement the boot sequence of the firmware
+d19b163356b	2025-02-07	Dikshita Agarwal	media: iris: implement video firmware load/unload
+d7378f84e94	2025-02-07	Dikshita Agarwal	media: iris: introduce iris core state management with shared queues
+fa186c97e3d	2025-02-07	Dikshita Agarwal	media: iris: implement iris v4l2 file ops
+38506cb7e8d	2025-02-07	Dikshita Agarwal	media: iris: add platform driver for iris video device
+210afa1598d	2024-12-16	Dr. David Alan Gilbert	media: venus: Remove unused hfi_core_ping()
+354846c3e9c	2024-12-30	Bryan O'Donoghue	media: venus: Populate video encoder/decoder nodename entries
+687bfbba5a1	2024-12-30	Bryan O'Donoghue	media: venus: Add support for static video encoder/decoder declarations
+daa7031a31c	2024-12-24	Sergey Senozhatsky	media: venus: match instance creation and destruction order
+df4ff47448f	2024-12-24	Sergey Senozhatsky	media: venus: destroy hfi session after m2m_ctx release
+1b3bb4d69f2	2024-10-26	Sergey Senozhatsky	media: venus: factor out inst destruction routine
+45b1a1b348e	2024-10-26	Sergey Senozhatsky	media: venus: sync with threaded IRQ during inst destruction
+6c9934c5a00	2024-10-26	Sergey Senozhatsky	media: venus: fix enc/dec destruction order
+0e1d123edf3	2024-10-22	Fritz Koenig	media: venus: Enable h.264 hierarchical coding
+498375e2cb2	2024-10-22	Fritz Koenig	media: venus: Helper function for dynamically updating bitrate
+2a20869f7d7	2024-11-01	Jinjie Ruan	media: venus: Fix pm_runtime_set_suspended() with runtime pm enabled
+547629f7b16	2024-09-02	Hans Verkuil	media: venus: add missing wait_prepare/finish ops
+a79d5da21b4	2024-10-02	Ulf Hansson	media: venus: Convert into devm_pm_domain_attach_list() for OPP PM domain
+7ce555252c7	2024-08-12	Lu Baolu	media: venus: firmware: Use iommu_paging_domain_alloc()
+909dc5ac4fd	2024-08-14	Ricardo Ribalda	media: venus: Convert one-element-arrays to flex-arrays
+a539fb1a894	2024-08-14	Ricardo Ribalda	media: venus: Refactor hfi_buffer_alloc_mode_supported
+87210c8052a	2024-08-14	Ricardo Ribalda	media: venus: Refactor hfi_session_fill_buffer_pkt
+d604a7bfd0f	2024-08-14	Ricardo Ribalda	media: venus: Refactor hfi_sys_get_property_pkt
+fd694882754	2024-08-14	Ricardo Ribalda	media: venus: Refactor hfi_session_empty_buffer_compressed_pkt
+3a5fde16fc2	2024-08-14	Ricardo Ribalda	media: venus: Refactor hfi_session_empty_buffer_uncompressed_plane0_pkt
+4aed1c43954	2024-08-14	Ricardo Ribalda	media: venus: Refactor struct hfi_uncompressed_format_supported
+886115c43e7	2024-08-14	Ricardo Ribalda	media: venus: Refactor struct hfi_session_get_property_pkt
+46b63be830c	2024-08-14	Ricardo Ribalda	media: venus: Refactor struct hfi_uncompressed_plane_info
+cd7a060df5b	2024-06-02	Christophe JAILLET	media: venus: Constify struct dec_bufsize_ops and enc_bufsize_ops
+c5a85ed88e0	2024-06-18	Zheng Wang	media: venus: fix use after free bug in venus_remove due to race condition
+32ef4b710cb	2024-07-10	Kees Cook	media: venus: hfi_cmds: struct hfi_session_release_buffer_pkt: Add __counted_by annotation
+c93452777f5	2024-07-10	Kees Cook	media: venus: hfi_cmds: struct hfi_session_release_buffer_pkt: Replace 1-element array with flexible array
+3b019409ce9	2024-08-19	Dikshita Agarwal	media: venus: use device managed APIs for power domains
+ec9a652e514	2024-06-24	Jagadeesh Kona	venus: pm_helpers: Use dev_pm_genpd_set_hwmode to switch GDSC mode on V6
+a0157b5aa34	2024-05-09	Dikshita Agarwal	media: venus: fix use after free in vdec_close
+193b3dac29a	2024-06-04	Pierre-Hugues Husson	media: venus: add msm8998 support
+02e92ea83b9	2024-03-06	Dikshita Agarwal	media: venus: avoid multiple core dumps
+e750a4b1224	2024-01-10	Dikshita Agarwal	media: venus: flush all buffers in output plane streamoff
+693c301a3aa	2024-01-30	Ulf Hansson	media: venus: Convert to dev_pm_domain_attach
+52a55df78fb	2024-01-26	Ricardo Ribalda	media: qcom: venus: Fix kerneldoc
+c2a8653c197	2023-12-01	Luca Weiss	media: venus: core: Set up secure memory ranges for SC7280

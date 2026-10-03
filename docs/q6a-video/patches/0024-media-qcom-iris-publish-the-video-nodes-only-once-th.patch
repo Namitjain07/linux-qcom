@@ -1,0 +1,120 @@
+From 441d38fa78919d1623da7acd8a5a26708eb98fea Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:28:35 +0000
+Subject: [PATCH] media: qcom: iris: publish the video nodes only once the
+ device is usable
+
+iris_probe() registered the decoder and encoder device nodes first and
+only afterwards set the driver data, the DMA mask and enabled runtime
+PM. From the moment video_register_device() returns the nodes are live:
+udev, a media daemon or a script that opens /dev/video* straight away
+races the rest of probe, and open() then fails in
+pm_runtime_resume_and_get() because runtime PM is not enabled yet, or
+allocates with the default DMA mask. That is a boot-time flake that
+looks like "the driver does not load".
+
+Set everything open() depends on up first and register the nodes last,
+and release the video-firmware device and IOMMU domain created by
+iris_fw_init() when a later probe step fails; it was leaked before.
+
+iris_remove() had the opposite problem. It tore the core down and then
+unregistered the nodes, so an open() in between would bring the core
+straight back up on a device that is going away, and it never
+cancelled the delayed recovery work that dereferences the core after a
+firmware error. Unregister the nodes first, cancel the work, then tear
+down.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_probe.c | 44 +++++++++++--------
+ 1 file changed, 26 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_probe.c b/drivers/media/platform/qcom/iris/iris_probe.c
+index d0fec92b1..d073be4fa 100644
+--- a/drivers/media/platform/qcom/iris/iris_probe.c
++++ b/drivers/media/platform/qcom/iris/iris_probe.c
+@@ -201,11 +201,15 @@ static void iris_remove(struct platform_device *pdev)
+ 	if (!core)
+ 		return;
+ 
+-	iris_core_deinit(core);
+-
++	/* No new users first: an open() after the teardown would bring the core back up */
+ 	video_unregister_device(core->vdev_dec);
+ 	video_unregister_device(core->vdev_enc);
+ 
++	/* The recovery work uses the core and may be pending after a firmware error */
++	cancel_delayed_work_sync(&core->sys_error_handler);
++
++	iris_core_deinit(core);
++
+ 	v4l2_device_unregister(&core->v4l2_dev);
+ 
+ 	iris_fw_deinit(core);
+@@ -279,25 +283,13 @@ static int iris_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = v4l2_device_register(dev, &core->v4l2_dev);
+-	if (ret)
+-		return ret;
+-
+-	ret = iris_register_video_device(core, DECODER);
+-	if (ret)
+-		goto err_v4l2_unreg;
+-
+-	ret = iris_register_video_device(core, ENCODER);
+-	if (ret)
+-		goto err_vdev_unreg_dec;
+-
+ 	platform_set_drvdata(pdev, core);
+ 
+ 	dma_mask = core->iris_platform_data->dma_mask;
+ 
+ 	ret = dma_set_mask_and_coherent(dev, dma_mask);
+ 	if (ret)
+-		goto err_vdev_unreg_enc;
++		goto err_fw_deinit;
+ 
+ 	dma_set_max_seg_size(&pdev->dev, DMA_BIT_MASK(32));
+ 	dma_set_seg_boundary(&pdev->dev, DMA_BIT_MASK(32));
+@@ -306,16 +298,32 @@ static int iris_probe(struct platform_device *pdev)
+ 	pm_runtime_use_autosuspend(core->dev);
+ 	ret = devm_pm_runtime_enable(core->dev);
+ 	if (ret)
+-		goto err_vdev_unreg_enc;
++		goto err_fw_deinit;
++
++	/*
++	 * Everything open() relies on (runtime PM, DMA mask, drvdata) is in
++	 * place now; only publish the device nodes after this point.
++	 */
++	ret = v4l2_device_register(dev, &core->v4l2_dev);
++	if (ret)
++		goto err_fw_deinit;
++
++	ret = iris_register_video_device(core, DECODER);
++	if (ret)
++		goto err_v4l2_unreg;
++
++	ret = iris_register_video_device(core, ENCODER);
++	if (ret)
++		goto err_vdev_unreg_dec;
+ 
+ 	return 0;
+ 
+-err_vdev_unreg_enc:
+-	video_unregister_device(core->vdev_enc);
+ err_vdev_unreg_dec:
+ 	video_unregister_device(core->vdev_dec);
+ err_v4l2_unreg:
+ 	v4l2_device_unregister(&core->v4l2_dev);
++err_fw_deinit:
++	iris_fw_deinit(core);
+ 
+ 	return ret;
+ }
+-- 
+2.43.0
+

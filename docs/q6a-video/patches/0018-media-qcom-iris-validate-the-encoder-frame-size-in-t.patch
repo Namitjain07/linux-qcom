@@ -1,0 +1,69 @@
+From b24262e2cee8a0335847bb15ec8a9d6bc6846587 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:25:55 +0000
+Subject: [PATCH] media: qcom: iris: validate the encoder frame size in try_fmt
+
+iris_venc_try_fmt() only corrected an unsupported pixel format; any
+width and height were accepted by TRY_FMT and S_FMT, for the raw queue
+and for the bitstream queue alike. The checks that exist later look at
+the raw size only (iris_check_resolution_supported() uses fmt_src), and
+never at the size the encoder is asked to produce, so:
+
+ - a size outside the 128..8192 range the driver itself advertises was
+   accepted without adjustment, with the failure only showing up when
+   streaming starts;
+ - the bitstream queue could be set larger than the raw frame, which is
+   an upscale. The VPU scaler only scales down; the firmware even has a
+   dedicated error code for it (HFI_ERR_SESSION_UPSCALE_NOT_SUPPORTED),
+   which the Gen1 response handler only reports at debug level, so
+   the failure is close to invisible.
+
+Clamp both queues to the platform limits, and clamp the bitstream size
+to the raw size so the only encoder-side resize the driver can request
+is a downscale. V4L2 expects the driver to adjust the format rather than
+accept an invalid one.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_venc.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_venc.c b/drivers/media/platform/qcom/iris/iris_venc.c
+index f60adff2f..a1acdc8b9 100644
+--- a/drivers/media/platform/qcom/iris/iris_venc.c
++++ b/drivers/media/platform/qcom/iris/iris_venc.c
+@@ -178,6 +178,7 @@ int iris_venc_enum_fmt(struct iris_inst *inst, struct v4l2_fmtdesc *f)
+ 
+ int iris_venc_try_fmt(struct iris_inst *inst, struct v4l2_format *f)
+ {
++	struct platform_inst_caps *caps = inst->core->iris_platform_data->inst_caps;
+ 	struct v4l2_pix_format_mplane *pixmp = &f->fmt.pix_mp;
+ 	struct v4l2_format *f_inst;
+ 	bool supported;
+@@ -210,6 +211,22 @@ int iris_venc_try_fmt(struct iris_inst *inst, struct v4l2_format *f)
+ 
+ 	pixmp->num_planes = 1;
+ 
++	/* Stay inside what the hardware can encode instead of accepting any size */
++	pixmp->width = clamp(pixmp->width, caps->min_frame_width, caps->max_frame_width);
++	pixmp->height = clamp(pixmp->height, caps->min_frame_height, caps->max_frame_height);
++
++	/*
++	 * The VPU scaler can only scale down: the firmware rejects an upscale
++	 * (HFI_ERR_SESSION_UPSCALE_NOT_SUPPORTED), so never let the encoded size
++	 * grow beyond the raw frame.
++	 */
++	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
++		pixmp->width = min(pixmp->width,
++				   max(inst->enc_raw_width, caps->min_frame_width));
++		pixmp->height = min(pixmp->height,
++				    max(inst->enc_raw_height, caps->min_frame_height));
++	}
++
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+

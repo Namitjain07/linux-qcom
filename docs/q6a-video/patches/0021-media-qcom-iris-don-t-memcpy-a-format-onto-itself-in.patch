@@ -1,0 +1,38 @@
+From e1d1ce3fe7d3bdb9a2aeca4b5953680861c93aad Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:26:45 +0000
+Subject: [PATCH] media: qcom: iris: don't memcpy a format onto itself in the
+ encoder
+
+iris_venc_s_fmt_output() ends by copying the instance's capture format
+into the format it was given. Both iris_venc_s_selection() and
+iris_venc_s_fmt_input() call it with inst->fmt_dst as that argument, so
+the source and destination of the memcpy() are the same object.
+Overlapping memcpy() is undefined and is flagged by some sanitizers and
+fortified libc-style checks. Skip the copy when it would be a no-op.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_venc.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_venc.c b/drivers/media/platform/qcom/iris/iris_venc.c
+index 2a2afa891..018c9fdff 100644
+--- a/drivers/media/platform/qcom/iris/iris_venc.c
++++ b/drivers/media/platform/qcom/iris/iris_venc.c
+@@ -267,7 +267,10 @@ static int iris_venc_s_fmt_output(struct iris_inst *inst, struct v4l2_format *f)
+ 	inst->buffers[BUF_OUTPUT].size = fmt->fmt.pix_mp.plane_fmt[0].sizeimage;
+ 	fmt->fmt.pix_mp.pixelformat = f->fmt.pix_mp.pixelformat;
+ 	inst->codec = f->fmt.pix_mp.pixelformat;
+-	memcpy(f, fmt, sizeof(struct v4l2_format));
++
++	/* S_SELECTION and the raw side of S_FMT pass the instance format itself */
++	if (f != fmt)
++		memcpy(f, fmt, sizeof(struct v4l2_format));
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

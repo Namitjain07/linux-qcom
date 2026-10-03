@@ -1,0 +1,27 @@
+sha	date	author	subject	fixes_target	cc_stable
+8afb9283017	2026-08-17	Daniel Baluta	media: iris: Guard the QCOM_UBWC_CONFIG select with QCOM_SMEM	c43207553867	False
+fc312f830d8	2026-04-24	Guoniu Zhou	media: dt-bindings: nxp,imx8-isi: Drop fsl,blk-ctrl requirement for i.MX8ULP	288517a3c6c9	True
+52dac5bda29	2026-07-30	Manivannan Sadhasivam	arm64: dts: qcom: kodiak: Fix the PCIe iommu-map entries	f8328b7549e1	False
+9941fe8a04f	2026-07-24	Mukesh Ojha	firmware: qcom: scm: Fix tzmem state on probe retry	40289e35ca52	False
+b697b20cea4	2026-07-24	Mukesh Ojha	firmware: qcom: scm: Fix reserved memory cleanup on probe failure	a33b2579c8d3	False
+966d23c7e68	2026-07-24	Mukesh Ojha	firmware: qcom: scm: Fix NULL dereference in IRQ handler before __scm is published	6bf325992236	False
+b9c2215bded	2026-06-30	Hungyu Lin	media: qcom: iris: use disable_irq() during power-off	bb8a95aa038e	True
+75d79879ec3	2026-06-04	Hungyu Lin	media: qcom: iris: handle runtime PM resume failure in core deinit	bb8a95aa038e	False
+94ef75095d5	2026-06-02	Bryan O'Donoghue	media: iris: Enumerate cap->bus_info to differentiate between encoder and decoder	5ad964ad5656	True
+727a87c71b4	2026-05-31	Dikshita Agarwal	media: qcom: iris: Remove duplicate HFI_PROP_OPB_ENABLE entry	2af481a459a4	False
+0ac05c4d9f1	2026-05-31	Dikshita Agarwal	media: qcom: iris: Fix bitmask test in iris_allow_cmd()	d09100763bed	False
+bd595b745eb	2026-06-10	Mohammed EL Kadiri	media: venus: fix payload size calculation in parse_raw_formats()	9edaaa8e3e15	True
+a51cea23e40	2026-06-10	Mohammed EL Kadiri	media: venus: fix payload size returned by parse_caps() and parse_alloc_mode()	9edaaa8e3e15	True
+5eebacbc9a3	2026-07-23	Wangao Wang	media: qcom: iris: fix missing hfi_id in gen1 GOP_SIZE cap	d22037f3fd33	True
+f87d7eda07f	2026-06-08	Hungyu Lin	media: qcom: iris: fix runtime PM reference leaks	bb8a95aa038e	True
+460d3257a6d	2026-05-31	Dikshita Agarwal	media: qcom: iris: fix state-change debug log printing stale value	11712ce70f8e	True
+42f83a32259	2026-07-15	Sakari Ailus	dt-bindings: media: i2c: Add Sony IMX678	447ea0c26e57	False
+9d7d847ff1c	2026-04-29	Jianping Li	arm64: dts: qcom: kodiak: avoid EFI overlap for ADSP remote heap	90a58ffa9c55	True
+c53e0550288	2026-03-31	Renjiang Han	media: qcom: venus: relax encoder frame/blur step size on v6	869d77e706290	False
+35428ae3a6a	2026-03-31	Renjiang Han	media: qcom: venus: relax encoder frame/blur dimension steps on v4	8b88cabef404e	False
+e1c9adabb26	2026-03-31	Renjiang Han	media: qcom: venus: drop extra padding in NV12 raw size calculation	e1cb72de702ad	False
+3eb9ba0da0a	2026-04-07	Dmitry Baryshkov	Revert "media: venus: hfi_platform: Correct supported codecs for sc7280"	c0ab2901fc68	False
+cca53c338ad	2026-04-16	Harshal Dev	arm64: dts: qcom: kodiak: Add power-domain and iface clk for ice node	dfd5ee7b34bb7	False
+a6e1618a65d	2026-04-23	Bibek Kumar Patro	iommu/arm-smmu-qcom: Fix fastrpc compatible string in ACTLR client match table	3e35c3e725de	False
+fa9c7403af6	2026-04-02	Kuldeep Singh	arm64: dts: qcom: kodiak: Fix ICE reg size	dfd5ee7b34bb	False
+018f2dc3a42	2025-12-25	Chen-Yu Tsai	dt-bindings: media: sun4i-a10-video-engine: Add interconnect properties	d41662e52a03	True

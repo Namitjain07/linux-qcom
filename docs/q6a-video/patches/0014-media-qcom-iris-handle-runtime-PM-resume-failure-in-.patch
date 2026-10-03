@@ -1,0 +1,88 @@
+From c06d43d34cf95959307c56405ccc5a33ae751715 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:22:39 +0000
+Subject: [PATCH] media: qcom: iris: handle runtime PM resume failure in core
+ deinit
+
+iris_core_deinit() ignored the return value of pm_runtime_resume_and_get()
+and then unconditionally powered the VPU off and dropped a reference it
+never took. When the resume fails, which is exactly the situation in
+which the core is torn down after an error, this unbalances the runtime
+PM usage count, and in the EL2 (no TrustZone) case the CPU reset in
+iris_fw_unload() is a register write to a block whose clocks are off.
+
+Skip the hardware power-off and the final put when the resume failed,
+and skip the register based CPU reset when the VPU is not powered, but
+still do the software teardown so the core ends up in IRIS_CORE_DEINIT.
+
+Based on upstream commit 75d79879ec3d ("media: qcom: iris: handle
+runtime PM resume failure in core deinit") by Hungyu Lin, adapted to
+the 7.0.11 tree, which has the extra synchronize_irq() step, and
+extended to cover the no-TZ reset.
+
+Fixes: bb8a95aa038e ("media: iris: implement power management")
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_core.c    | 17 ++++++++++++++---
+ .../media/platform/qcom/iris/iris_firmware.c    |  4 +++-
+ 2 files changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_core.c b/drivers/media/platform/qcom/iris/iris_core.c
+index 370902b68..af9bd68f9 100644
+--- a/drivers/media/platform/qcom/iris/iris_core.c
++++ b/drivers/media/platform/qcom/iris/iris_core.c
+@@ -14,12 +14,21 @@
+ 
+ void iris_core_deinit(struct iris_core *core)
+ {
+-	pm_runtime_resume_and_get(core->dev);
++	int ret;
++
++	ret = pm_runtime_resume_and_get(core->dev);
+ 
+ 	mutex_lock(&core->lock);
+ 	if (core->state != IRIS_CORE_DEINIT) {
+ 		iris_fw_unload(core);
+-		iris_vpu_power_off(core);
++
++		/*
++		 * If the device could not be resumed the hardware is not
++		 * powered, so there is nothing to power off. Carry on with the
++		 * software teardown so the core does not stay half-initialised.
++		 */
++		if (!ret)
++			iris_vpu_power_off(core);
+ 		mutex_unlock(&core->lock);
+ 
+ 		synchronize_irq(core->irq);
+@@ -32,7 +41,9 @@ void iris_core_deinit(struct iris_core *core)
+ 	}
+ 	mutex_unlock(&core->lock);
+ 
+-	pm_runtime_put_sync(core->dev);
++	/* Only drop the reference if pm_runtime_resume_and_get() took one */
++	if (!ret)
++		pm_runtime_put_sync(core->dev);
+ }
+ 
+ bool iris_core_prepare_deinit(struct iris_core *core)
+diff --git a/drivers/media/platform/qcom/iris/iris_firmware.c b/drivers/media/platform/qcom/iris/iris_firmware.c
+index 05e437fdd..1b8334586 100644
+--- a/drivers/media/platform/qcom/iris/iris_firmware.c
++++ b/drivers/media/platform/qcom/iris/iris_firmware.c
+@@ -244,8 +244,10 @@ int iris_fw_unload(struct iris_core *core)
+ 
+ 	if (core->use_tz)
+ 		ret = qcom_scm_pas_shutdown(IRIS_PAS_ID);
+-	else
++	else if (core->hw_powered)
+ 		ret = iris_set_hw_state_no_tz(core, false);
++	else
++		ret = 0; /* unclocked: the CPU is already held in reset */
+ 
+ 	if (core->fw.mapped_mem_size) {
+ 		size_t unmapped = iommu_unmap(core->fw.iommu_domain, IRIS_FW_START_ADDR,
+-- 
+2.43.0
+

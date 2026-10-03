@@ -60,6 +60,18 @@ curl -fLO https://gitlab.com/kernel-firmware/linux-firmware/-/raw/30a139cb656157
 | B33 | Qualcomm: SID `0x2184` is a secure internal buffer for the encode use case; firmware changed so only `0x2180` is generated | **S** | search snippet of the Oct 2024–Jan 2025 LKML thread on "arm64: dts: qcom: sc7280: enable venus node" | page blocked |
 | B34 | Gen2 encode on VPU 2.0 works | **U** | no test evidence found | on-device |
 | B35 | Encoder-side hardware scaling works on SC7280 | **U** | plumbing exists (B19); Radxa claims (B30); no firmware proof | `v4l2-enc-probe` + streamed test |
+| B36 | HFI command queue accepts a packet that exactly fills it (`iris_hfi_queue.c:24`); Venus rejects (`hfi_venus.c:198`) | P | code + `tests/ring-queue` replay | `tests/ring-queue/run.sh` |
+| B37 | `iris_hfi_queue_cmd_write()` puts the PM reference twice when the resume fails (`:135`/`:149`) | P | code; `pm_runtime_resume_and_get()` drops the count itself | read lines |
+| B38 | IRQ thread reads interrupt registers under `core->lock` with no ordering against runtime-suspend power-off (`iris_hfi_common.c:133`) | P | code; locking model (`tests/irq-model`) — kernel run-time behaviour **U** | read; run model |
+| B39 | Upstream `b9c2215bde` would call `disable_irq()` with `core->lock` held in `iris_core_deinit()` while the thread needs the lock | P (code) / model | `iris_core.c:17-25`, `iris_hfi_common.c:133` | `tests/irq-model` case 2 |
+| B40 | A firmware larger than the carveout fails with no message (`iris_firmware.c:164`) | P | code | read |
+| B41 | Nodes are registered before drvdata/DMA mask/runtime PM (`iris_probe.c:281` vs `:293`, `:306`) | P | code | read |
+| B42 | Encoder `G_SELECTION` bounds (aligned 1088) ≠ `S_SELECTION` limit (visible 1080) (`iris_vidc.c:504`, `iris_venc.c:295,361`) | P | code | read; `tools/v4l2-enc-neg-test` on a node |
+| B43 | `iris_venc_try_fmt()` accepts any size and an upscale (`iris_venc.c:169`) | P | code; Gen1 error code `HFI_ERR_SESSION_UPSCALE_NOT_SUPPORTED` logged at debug only (`iris_hfi_gen1_response.c:239-245`) | read |
+| B44 | Gen1 never sends a crop to the firmware; a crop request becomes a resize of the whole frame | P | `grep -i crop iris_hfi_gen1*.c` shows only decode-side extradata | grep |
+| B45 | Iris sends buffer timestamps in nanoseconds, Venus in microseconds | P | `iris_common.c:24`, `venus/helpers.c:509-510` | read; effect **U** |
+| B46 | The 25-commit series builds clean per commit (clang 18, arm64, W=1), tip also with IRIS=n; checkpatch/analyzer clean on code | P | build logs in session; `git rebase --exec` | rerun `patches/README.md` build line |
+| B47 | `fw-detect` replay: unterminated marker at blob end faults before the fix | P | `tests/fw-detect` | run |
 
 ## C. Commit / PR index
 
@@ -72,6 +84,7 @@ curl -fLO https://gitlab.com/kernel-firmware/linux-firmware/-/raw/30a139cb656157
 | radxa/kernel | `38befa2de`, `f50b9f96c` | 2026-08-18 | Vishnu Reddy | frame-interval fix (GStreamer encode); power-off ordering fix |
 | radxa/kernel | `87c604bff` `08282c7c5` `4fef0d63f` `2ac17acf5` `d655943bf` `038eff48c` `d5cdbbdaa` `6198771c7` `4e94efbb5` `96982befa` `a5ca5d13e` `fe41e5e55` | 2026-08-02…12 | Junhao Xie | encoder + teardown hardening (PR #593) |
 | radxa/kernel | `9799c23c7` | 2025-10-09 (6.18) | Xilin Wu | venus: comment out "HW can't support this load" + 10-bit gating workaround |
+| Namitjain07/kernel | PR #1 (`claude/q6a-iris-venus-fixes`) | 2026-10-03 | — | the 25-commit Iris/Venus fix series (draft, untested on hardware) |
 | radxa/kernel | PR #593 / #607 / #600 | 2026-08-12 / 09-15 / — | BigfootACA / strongtz / nascs | see B30/B31; #600 "default decoder output to linear NV12" |
 | qualcomm-linux/kernel | `55ee57c12`→`8f100f5896` | 2026-03-27 | Dmitry Baryshkov | venus: flip the venus/iris switch |
 | qualcomm-linux/kernel | `412a2e5955` | 2026-06-10 | Dikshita Agarwal | iris: Gen2 firmware autodetect and fallback |
@@ -105,4 +118,4 @@ Secondhand (S): forum.radxa.com thread 29828; the Qualcomm support-forum post on
 **Blocked by network policy** (unreadable here): forum.radxa.com, docs.radxa.com, lore.kernel.org, patchwork.kernel.org, patches.linaro.org, lkml.iu.edu, ratatoskr.run, patchew.org, mail-archive.com, mysupport.qualcomm.com. If your agent can reach them, the highest-value reads are: the forum thread 29828 (what firmware/OS the reporter had), the Oct 2024–Jan 2025 LKML thread (exact wording on SID 0x2184 and which firmware fixed it), and Radxa's Q6A docs pages on video/EL2.
 
 ## F. Known gaps
-No on-device data; the TZ-mode reboot mechanism is documented upstream (B25) but its application to *encode on this board* rests on S-grade reports (B32, B33); Gen2 encode correctness on VPU 2.0 (B34) and encoder-side scaling (B35) are open; the `.zst` branch of the diag script's firmware reader was not exercised (no `zstd` in the research sandbox; `.xz` and plain were); nothing in `tools/` was run against real hardware; no kernel patch has been compiled.
+No on-device data; the TZ-mode reboot mechanism is documented upstream (B25) but its application to *encode on this board* rests on S-grade reports (B32, B33); Gen2 encode correctness on VPU 2.0 (B34) and encoder-side scaling (B35) are open; the `.zst` branch of the diag script's firmware reader was not exercised (no `zstd` in the research sandbox; `.xz` and plain were); nothing in `tools/` was run against real hardware; the patch series is compiled and statically checked but **never run on hardware**, and the clang static analyzer only exercises the touched files in isolation.

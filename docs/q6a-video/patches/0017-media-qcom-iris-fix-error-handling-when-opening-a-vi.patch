@@ -1,0 +1,168 @@
+From 4f59b78d93bc873e4f16e7aaa5f708dfe773d7ae Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:24:04 +0000
+Subject: [PATCH] media: qcom: iris: fix error handling when opening a video
+ node
+
+Three problems in the open() path:
+
+ - iris_add_session() silently skipped list_add_tail() once the platform
+   session limit was reached, yet open() still returned success. The
+   instance then isn't on core->instances, so the first real operation
+   fails with the unrelated "current session not supported(-22)" and
+   the user never learns that the limit was the cause. Fail the open
+   with -EBUSY instead, and release what was already set up.
+
+ - iris_vdec_inst_init() did not check the two kzalloc results and
+   dereferenced them straight away.
+
+ - When iris_ctrls_init() failed, the two format structures allocated
+   just before it were leaked; and iris_venc_inst_init() left dangling
+   pointers behind after freeing them. Free them in the init function
+   and clear the pointers.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_vdec.c | 17 ++++++++++++++-
+ drivers/media/platform/qcom/iris/iris_venc.c | 22 ++++++++++++++------
+ drivers/media/platform/qcom/iris/iris_vidc.c | 17 +++++++++++++--
+ 3 files changed, 47 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_vdec.c b/drivers/media/platform/qcom/iris/iris_vdec.c
+index 7f89e745a..878872994 100644
+--- a/drivers/media/platform/qcom/iris/iris_vdec.c
++++ b/drivers/media/platform/qcom/iris/iris_vdec.c
+@@ -20,9 +20,12 @@ int iris_vdec_inst_init(struct iris_inst *inst)
+ {
+ 	struct iris_core *core = inst->core;
+ 	struct v4l2_format *f;
++	int ret = 0;
+ 
+ 	inst->fmt_src = kzalloc_obj(*inst->fmt_src);
+ 	inst->fmt_dst = kzalloc_obj(*inst->fmt_dst);
++	if (!inst->fmt_src || !inst->fmt_dst)
++		goto err_free_fmt;
+ 
+ 	inst->fw_min_count = 0;
+ 
+@@ -59,7 +62,19 @@ int iris_vdec_inst_init(struct iris_inst *inst)
+ 	memcpy(&inst->fw_caps[0], &core->inst_fw_caps_dec[0],
+ 	       INST_FW_CAP_MAX * sizeof(struct platform_inst_fw_cap));
+ 
+-	return iris_ctrls_init(inst);
++	ret = iris_ctrls_init(inst);
++	if (ret)
++		goto err_free_fmt;
++
++	return 0;
++
++err_free_fmt:
++	kfree(inst->fmt_src);
++	kfree(inst->fmt_dst);
++	inst->fmt_src = NULL;
++	inst->fmt_dst = NULL;
++
++	return ret ? ret : -ENOMEM;
+ }
+ 
+ static const u32 iris_vdec_formats_cap[] = {
+diff --git a/drivers/media/platform/qcom/iris/iris_venc.c b/drivers/media/platform/qcom/iris/iris_venc.c
+index c45798bdd..f60adff2f 100644
+--- a/drivers/media/platform/qcom/iris/iris_venc.c
++++ b/drivers/media/platform/qcom/iris/iris_venc.c
+@@ -18,14 +18,12 @@ int iris_venc_inst_init(struct iris_inst *inst)
+ {
+ 	struct iris_core *core = inst->core;
+ 	struct v4l2_format *f;
++	int ret = 0;
+ 
+ 	inst->fmt_src = kzalloc_obj(*inst->fmt_src);
+ 	inst->fmt_dst = kzalloc_obj(*inst->fmt_dst);
+-	if (!inst->fmt_src || !inst->fmt_dst) {
+-		kfree(inst->fmt_src);
+-		kfree(inst->fmt_dst);
+-		return -ENOMEM;
+-	}
++	if (!inst->fmt_src || !inst->fmt_dst)
++		goto err_free_fmt;
+ 
+ 	f = inst->fmt_dst;
+ 	f->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+@@ -76,7 +74,19 @@ int iris_venc_inst_init(struct iris_inst *inst)
+ 	memcpy(&inst->fw_caps[0], &core->inst_fw_caps_enc[0],
+ 	       INST_FW_CAP_MAX * sizeof(struct platform_inst_fw_cap));
+ 
+-	return iris_ctrls_init(inst);
++	ret = iris_ctrls_init(inst);
++	if (ret)
++		goto err_free_fmt;
++
++	return 0;
++
++err_free_fmt:
++	kfree(inst->fmt_src);
++	kfree(inst->fmt_dst);
++	inst->fmt_src = NULL;
++	inst->fmt_dst = NULL;
++
++	return ret ? ret : -ENOMEM;
+ }
+ 
+ static const u32 iris_venc_formats_cap[] = {
+diff --git a/drivers/media/platform/qcom/iris/iris_vidc.c b/drivers/media/platform/qcom/iris/iris_vidc.c
+index 1d7af6496..418cc8231 100644
+--- a/drivers/media/platform/qcom/iris/iris_vidc.c
++++ b/drivers/media/platform/qcom/iris/iris_vidc.c
+@@ -40,11 +40,12 @@ static void iris_v4l2_fh_deinit(struct iris_inst *inst, struct file *filp)
+ 	v4l2_fh_exit(&inst->fh);
+ }
+ 
+-static void iris_add_session(struct iris_inst *inst)
++static int iris_add_session(struct iris_inst *inst)
+ {
+ 	struct iris_core *core = inst->core;
+ 	struct iris_inst *iter;
+ 	u32 count = 0;
++	int ret = 0;
+ 
+ 	mutex_lock(&core->lock);
+ 
+@@ -53,8 +54,12 @@ static void iris_add_session(struct iris_inst *inst)
+ 
+ 	if (count < core->iris_platform_data->max_session_count)
+ 		list_add_tail(&inst->list, &core->instances);
++	else
++		ret = -EBUSY;
+ 
+ 	mutex_unlock(&core->lock);
++
++	return ret;
+ }
+ 
+ static void iris_remove_session(struct iris_inst *inst)
+@@ -209,12 +214,20 @@ int iris_open(struct file *filp)
+ 	if (ret)
+ 		goto fail_m2m_ctx_release;
+ 
+-	iris_add_session(inst);
++	ret = iris_add_session(inst);
++	if (ret) {
++		dev_err(core->dev, "too many open sessions\n");
++		goto fail_free_inst_data;
++	}
+ 
+ 	inst->fh.m2m_ctx = inst->m2m_ctx;
+ 
+ 	return 0;
+ 
++fail_free_inst_data:
++	v4l2_ctrl_handler_free(&inst->ctrl_handler);
++	kfree(inst->fmt_src);
++	kfree(inst->fmt_dst);
+ fail_m2m_ctx_release:
+ 	v4l2_m2m_ctx_release(inst->m2m_ctx);
+ fail_m2m_release:
+-- 
+2.43.0
+

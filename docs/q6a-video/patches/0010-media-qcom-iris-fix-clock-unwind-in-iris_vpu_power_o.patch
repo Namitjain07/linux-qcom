@@ -1,0 +1,44 @@
+From ec7dc261463bc09921ed4e22468c5d5eb35c1aba Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:17:29 +0000
+Subject: [PATCH] media: qcom: iris: fix clock unwind in iris_vpu_power_on_hw()
+
+When enabling IRIS_BSE_HW_CLK fails, the error path jumped to
+err_disable_bse_hw_clock, which disables the BSE clock that was never
+enabled and then falls through to disable only IRIS_HW_CLK. The
+IRIS_HW_AHB_CLK enabled in the previous step is left running, and each
+failed power-on leaks one more enable count on it.
+
+Jump to a new err_disable_hw_ahb_clock label that undoes the steps that
+actually succeeded, in reverse order. Upstream main has the same
+unwind.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_vpu_common.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_vpu_common.c b/drivers/media/platform/qcom/iris/iris_vpu_common.c
+index cdb39f048..80c0681e5 100644
+--- a/drivers/media/platform/qcom/iris/iris_vpu_common.c
++++ b/drivers/media/platform/qcom/iris/iris_vpu_common.c
+@@ -295,12 +295,12 @@ int iris_vpu_power_on_hw(struct iris_core *core)
+ 
+ 	ret = iris_prepare_enable_clock(core, IRIS_BSE_HW_CLK);
+ 	if (ret && ret != -ENOENT)
+-		goto err_disable_bse_hw_clock;
++		goto err_disable_hw_ahb_clock;
+ 
+ 	return 0;
+ 
+-err_disable_bse_hw_clock:
+-	iris_disable_unprepare_clock(core, IRIS_BSE_HW_CLK);
++err_disable_hw_ahb_clock:
++	iris_disable_unprepare_clock(core, IRIS_HW_AHB_CLK);
+ err_disable_hw_clock:
+ 	iris_disable_unprepare_clock(core, IRIS_HW_CLK);
+ err_disable_power:
+-- 
+2.43.0
+

@@ -1,0 +1,60 @@
+From f795a7e11a5936f1c023b8d193c1b41ff628e018 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:19:49 +0000
+Subject: [PATCH] media: qcom: iris: don't drop a runtime PM reference that was
+ never taken
+
+pm_runtime_resume_and_get() already drops the usage count itself when
+the resume fails. iris_hfi_queue_cmd_write() jumped to a common exit
+label for that case, which called pm_runtime_put_sync() a second time
+and underflowed the device's usage count. A negative count makes later
+resume/suspend decisions wrong: the device can be suspended while it is
+still in use, or never again.
+
+Return straight away when the resume fails and only put the reference
+on the path where it was actually taken.
+
+Fixes: bb8a95aa038e ("media: iris: implement power management")
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_hfi_queue.c | 14 +++++---------
+ 1 file changed, 5 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_queue.c b/drivers/media/platform/qcom/iris/iris_hfi_queue.c
+index bf6db23b5..60354964e 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_queue.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_queue.c
+@@ -132,24 +132,20 @@ int iris_hfi_queue_cmd_write(struct iris_core *core, void *pkt, u32 pkt_size)
+ 
+ 	ret = pm_runtime_resume_and_get(core->dev);
+ 	if (ret < 0)
+-		goto exit;
++		return ret;
+ 
+ 	mutex_lock(&core->lock);
+ 	ret = iris_hfi_queue_cmd_write_locked(core, pkt, pkt_size);
++	mutex_unlock(&core->lock);
++
+ 	if (ret) {
+-		mutex_unlock(&core->lock);
+-		goto exit;
++		pm_runtime_put_sync(core->dev);
++		return ret;
+ 	}
+-	mutex_unlock(&core->lock);
+ 
+ 	pm_runtime_put_autosuspend(core->dev);
+ 
+ 	return 0;
+-
+-exit:
+-	pm_runtime_put_sync(core->dev);
+-
+-	return ret;
+ }
+ 
+ int iris_hfi_queue_msg_read(struct iris_core *core, void *pkt)
+-- 
+2.43.0
+

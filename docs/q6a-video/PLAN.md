@@ -18,6 +18,7 @@ The work is **done** when all of these hold (record each in the results file, G�
 | S6 | 5-minute sustained 1080p30 encode without hang, drop or fault | G§9 |
 | S7 | Scaling question answered with evidence: probe verdict + (if applicable) streamed result, **or** a working CPU/GPU-scale → VPU-encode pipeline | G§10 |
 | S8 | A written results file returned to the user | G§12 |
+| S9 | *(only if the patched kernel is installed)* negotiation self-test passes and output bitrate is within ±15 % of the target (first-guess threshold, adjust after the first measurement) | G§13 |
 
 ## 1. Rules of engagement (authority tiers)
 
@@ -100,17 +101,30 @@ In EL2 the risk class drops, but **still** stream logs and `sync` first.
 4. Always produce a CPU-scale → VPU-encode baseline so there is a working pipeline regardless (G§10.3). A GPU path (Vulkan `scale_vulkan`) is **untested on this board** — try only if CPU cost is a problem.
 **Exit gate:** S7.
 
-### Phase 6 — Kernel work (conditional; repo, not board) · 0.5–2 days
-Start **only** if Phase 4/7 shows a driver bug that a patch addresses. Candidate patches, all small and stable-tagged upstream (REPORT §4.6):
-| Patch | Upstream SHA (qualcomm-linux/kernel) | Start if you see |
-|---|---|---|
-| `iris_allow_cmd()` bitmask | `0ac05c4d9f` | encoder/decoder hangs at end-of-stream (drain/stop) |
-| `disable_irq()` at power-off | `b9c2215bde` | oops/abort at suspend/close, `Unhandled` aborts after close |
-| runtime-PM reference leaks | `f87d7eda07` | core never powers down, repeated open failures |
-| resume-failure handling in deinit | `75d79879ec` | errors in teardown after failed resume |
-| Gen2→Gen1 fallback also on size/auth failure | **new** (not upstream) | Gen2 present but `firmware download failed -22` / `auth and reset failed` on a stock-carveout board |
-| AHB-bridge reset before HW mode | kernel-topics PR #1907 `25cd9a2` (unmerged) | intermittent hangs right after firmware boot; **unverified for VPU2** |
-Procedure: add as `debian/patches/linux/0003-….patch` (paths are prefixed `src/`), append to `debian/patches/series`, build per README (`make deb`) or compile-check Iris with `make LLVM=1 ARCH=arm64 drivers/media/platform/qcom/iris/` against the Radxa tree. **Nothing here has been compile-tested yet.** Install on the board only with human approval (T3).
+### Phase 6 — Kernel work (conditional; repo, not board) · hours
+**Status:** the series exists — 25 commits, PR `Namitjain07/kernel#1`, exported in `patches/` (explained in `FIXES.md`). It is **compile-tested only**. Treat it as a candidate, not a fix.
+
+Use it when Phase 4/7 shows a symptom the series addresses, or when the human wants the hardening anyway:
+| Symptom | Patches (see `FIXES.md` §1) |
+|---|---|
+| Encoder/decoder hang at end of stream (drain/stop) | 1 |
+| Abort / `Unhandled fault` right after idle, suspend or close; hang on first open after suspend | 13 (and 9, 11, 14) |
+| Core never powers down; repeated open failures; negative PM usage count | 9, 11, 14 |
+| Command silently never processed under heavy queueing | 12 |
+| `firmware download failed -22` with no explanation; wrong HFI generation | 23 (diagnosis), 22 |
+| `/dev/video*` present but first open fails at boot | 24 |
+| `close()` / `STREAMOFF` stuck in `D` state after a firmware error | 15, 16 |
+| Encoder: bitrate off at 29.97/23.976 fps; Gen1 GOP size ignored | 20, 3 |
+| Sizes accepted then failing at stream start; crop bounds rejected; upscale requested | 18, 19 |
+| Corrupted frames, DT without `dma-coherent` | 25 (warns; the fix is the DT property) |
+
+Procedure (human does the install — T3):
+1. Build off-board: `make -C <kernel> O=<out> ARCH=arm64 LLVM=1 -j"$(nproc)"` on the PR branch (or `git am` the files in `patches/`), or add the patches to `debian/patches/linux/` with `src/` paths (see `patches/README.md`) and `make deb`.
+2. Install the kernel/modules on the board, reboot.
+3. Run G§13 and compare with the unpatched numbers from Phase 4.
+4. If any criterion regresses, revert to the previous kernel and report which commit the symptom points to (`FIXES.md` §6).
+
+Not implemented, on purpose: automatic Gen2→Gen1 fallback (hides misconfiguration; #23 makes the cause visible); AHB-bridge reset before HW mode (kernel-topics PR #1907, unmerged, unverified for VPU2).
 
 ### Phase 7 — Fallbacks (only if Phase 4 fails after fixes)
 - **7a. TZ-mode test (T2).** Only with human approval, verified firmware, log streaming and ≤ 3 attempts. Purpose: learn whether the reboot reproduces with correct firmware (turns S into P).
@@ -128,7 +142,7 @@ encode failed / board reset / corrupt output
 │    ├─ mode EL1 → expected hazard; do NOT repeat. Go EL2 (Phase 3) or report. Evidence: journalctl -k -b -1, pstore, off-board dmesg stream
 │    └─ mode EL2 → capture serial log; check `arm-smmu` / SID in the last lines; report (new finding)
 ├─ "Direct firmware load … -2" / "firmware download failed -2" → firmware missing/misnamed → Phase 2
-├─ "firmware download failed -22" → carveout < 0x700000 for Gen2 → DT carveout (Radxa DTS has 7 MiB; confirm), or Gen1 fallback patch (Phase 6)
+├─ "firmware download failed -22" → carveout < 0x700000 for Gen2 → DT carveout (Radxa DTS has 7 MiB; confirm), or use a Gen1 firmware (the patched driver, Phase 6 #23, prints the needed and available sizes)
 ├─ "auth and reset failed: …" or "error … initializing firmware" → bad/unsigned blob (MBNv7?) → Phase 2, verify hash
 ├─ "Gen1 FW detected in <gen2 file>" → impossible for the real blob; means the file is not the real Gen2 → re-verify hash
 ├─ "core init failed" / "error booting up iris firmware" / "invalid setting for uc_region" → firmware boot failure → check mode, memory-region, firmware; capture all lines before it
@@ -136,7 +150,7 @@ encode failed / board reset / corrupt output
 ├─ "Unhandled context fault" / SMMU sid in log → IOMMU mapping problem; record SID (0x2184 ⇒ TZ/EL2 mismatch)
 ├─ output decodes but PSNR < 30 → corruption → compare with software baseline at same size/bitrate; check `dma-coherent` present (diag §4); check firmware generation
 ├─ GStreamer "internal data stream error" at 25/29 fps → missing frame-interval fix (Radxa 38befa2de) → wrong kernel build
-└─ hang (timeout 124) → collect SFR + `dmesg`; Phase 6 candidates (`0ac05c4d9f`, `b9c2215bde`)
+└─ hang (timeout 124) → collect SFR + `dmesg`; Phase 6 patches 1, 13, 14 (`FIXES.md` §1)
 ```
 
 ## 4. Risk register

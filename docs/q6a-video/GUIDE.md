@@ -303,6 +303,8 @@ Firmware: gen2 <present/sha256/MBN>, gen1 <fingerprint>   dma-coherent: <yes/no>
 | S7 scaling: probe verdict | KEPT / FORCED BACK | probe.txt |
 | S7 scaling: streamed test or pre-scale pipeline | | |
 | S8 this file | | |
+| S9 patched driver: negotiation self-test (G§13.1) | | |
+| S9 patched driver: bitrate vs target (G§13.4) | | |
 
 ## Resets / hangs
 <time, command, log tail, boot mode>
@@ -315,3 +317,44 @@ Firmware: gen2 <present/sha256/MBN>, gen1 <fingerprint>   dma-coherent: <yes/no>
 
 Attachments: diag-before.txt, diag-after.txt, probe.txt, matrix.txt, stability.txt, board-dmesg-*.log, journalctl -b -1 (if a reset happened)
 ```
+
+## G§13 Patched driver tests (T1; only after the **human** installed the patched kernel — T3)
+
+The series is in `patches/` (explained in `FIXES.md`). Building and installing it is the human's job (`PLAN.md` Phase 6). Everything below opens the encoder node, which boots the VPU firmware like any client; none of it needs TrustZone-mode encode, so it is T1 in EL2 and **T2 in EL1** if a hardware encode is started (13.3–13.4).
+
+```bash
+# 13.0 board$ — is this the patched driver? (the "HFI, … reserved memory" line exists only in the patched driver)
+uname -r
+ENC=$(for d in /dev/video*; do v4l2-ctl -d "$d" --info 2>/dev/null | grep -q 'Iris Encoder' && echo "$d"; done | head -1); echo "encoder node: $ENC"
+v4l2-ctl -d "$ENC" --info >/dev/null          # first open loads the firmware
+sudo dmesg | grep -iE 'iris|firmware .*HFI|dma-coherent'
+#   expect: "firmware qcom/vpu/…mbn: Gen2 HFI, <size> of <region> bytes of reserved memory"
+#   must NOT appear: 'DT node has no "dma-coherent"', 'needs … bytes but the reserved memory region has'
+
+# 13.1 board$ — negotiation self-test (no buffers, no streaming). All lines must say PASS.
+gcc -O2 -Wall -o /tmp/v4l2-enc-neg-test ~/linux-qcom-docs/docs/q6a-video/tools/v4l2-enc-neg-test.c
+/tmp/v4l2-enc-neg-test "$ENC" | tee ~/q6a-neg-test.txt ; echo "exit=${PIPESTATUS[0]}"
+#   FAIL lines name the unpatched behaviour in brackets; paste them into the results file.
+
+# 13.2 board$ — repeat the G§6 encode matrix and compare with the unpatched numbers from Phase 4 (same THRESH).
+
+# 13.3 board$ — idle / runtime-suspend cycles (exercises patches 9, 11, 13, 14). The autosuspend delay is 1.5 s.
+for _ in 1 2 3 4 5; do
+  ENC=h264_v4l2m2m N=30 ~/linux-qcom-docs/docs/q6a-video/tools/encode-validate.sh || break
+  sleep 5
+done
+sudo dmesg | grep -iE 'timed out|watchdog|Unhandled|arm-smmu|system error|synchronous external abort|queue full' || echo "no suspicious lines"
+
+# 13.4 board$ — bitrate accuracy (the Iris-ns vs Venus-us timestamp question; FIXES.md §5). 10 s of 1080p30 at 2 Mbit/s.
+timeout 120 ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=1920x1080:rate=30,format=nv12 -t 10 \
+  -c:v h264_v4l2m2m -b:v 2M /tmp/br.mkv
+python3 - <<'PY'
+import os,subprocess
+d=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0','/tmp/br.mkv']))
+b=os.path.getsize('/tmp/br.mkv')*8/d
+print(f"actual {b/1e6:.2f} Mbit/s vs target 2.00 ({100*b/2e6:.0f}%)")
+PY
+#   record the number whatever it is; > ~115 % or < ~85 % is a finding (rate control / timestamp units), not a test failure by itself.
+```
+
+Record in the results file (G§12): the `dmesg` lines of 13.0, the full output of 13.1, the PASS/FAIL of 13.2, whether 13.3 produced any suspicious line, and the percentage from 13.4.

@@ -1,0 +1,52 @@
+##### tests/ring-queue
+=== before ===
+write #0: ret=0   write_idx=1024  read_idx=0   firmware_sees=data
+write #1: ret=0   write_idx=2048  read_idx=0   firmware_sees=data
+write #2: ret=0   write_idx=3072  read_idx=0   firmware_sees=data
+write #3: ret=0   write_idx=4096  read_idx=0   firmware_sees=data
+write #4: ret=0   write_idx=5120  read_idx=0   firmware_sees=data
+write #5: ret=0   write_idx=6144  read_idx=0   firmware_sees=data
+write #6: ret=0   write_idx=7168  read_idx=0   firmware_sees=data
+write #7: ret=0   write_idx=0     read_idx=0   firmware_sees=EMPTY
+write #8: ret=0   write_idx=1024  read_idx=0   firmware_sees=data
+write #9: ret=0   write_idx=2048  read_idx=0   firmware_sees=data
+accepted=10  packets that vanish because the full queue looks empty=1
+RESULT: BUG - the full queue is reported as success and then looks empty to the firmware
+exit=1
+
+=== after ===
+write #0: ret=0   write_idx=1024  read_idx=0   firmware_sees=data
+write #1: ret=0   write_idx=2048  read_idx=0   firmware_sees=data
+write #2: ret=0   write_idx=3072  read_idx=0   firmware_sees=data
+write #3: ret=0   write_idx=4096  read_idx=0   firmware_sees=data
+write #4: ret=0   write_idx=5120  read_idx=0   firmware_sees=data
+write #5: ret=0   write_idx=6144  read_idx=0   firmware_sees=data
+write #6: ret=0   write_idx=7168  read_idx=0   firmware_sees=data
+write #7: ret=-28 write_idx=7168  read_idx=0   firmware_sees=data
+accepted=7  packets that vanish because the full queue looks empty=0
+RESULT: OK - the queue is reported full (-ENOSPC) before the indices collide
+exit=0
+
+##### tests/fw-detect
+=== before ===
+vfw tag, string at start                     -> Gen2  (expected Gen2)
+video-firmware.1.0 (Gen1)                    -> Gen1  (expected Gen1)
+video-firmware.2.1 (Gen2)                    -> Gen2  (expected Gen2)
+no marker                                    -> Gen1  (expected Gen1)
+./tests/fw-detect/run.sh: line 4: 15691 Segmentation fault      stdbuf -o0 /tmp/fwdetect_$v
+exit=139
+
+=== after ===
+vfw tag, string at start                     -> Gen2  (expected Gen2)
+video-firmware.1.0 (Gen1)                    -> Gen1  (expected Gen1)
+video-firmware.2.1 (Gen2)                    -> Gen2  (expected Gen2)
+no marker                                    -> Gen1  (expected Gen1)
+marker + 'vfw' ending exactly at blob end    -> Gen2  (expected Gen2)
+marker + 'video-firmware.1' unterminated     -> Gen1  (expected Gen1)
+exit=0
+
+##### tests/irq-model
+1 runtime suspend, current tree                            deadlock=no  register-access-with-clocks-off=YES
+2 core_deinit under core->lock, upstream 1-liner           deadlock=YES register-access-with-clocks-off=YES
+3 runtime suspend, this series                             deadlock=no  register-access-with-clocks-off=no
+4 core_deinit under core->lock, this series                deadlock=no  register-access-with-clocks-off=no
