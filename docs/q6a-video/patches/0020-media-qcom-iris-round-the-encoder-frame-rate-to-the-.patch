@@ -1,0 +1,41 @@
+From adad2b26f4208d1beea360e8668a4eab263c5d5f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:26:34 +0000
+Subject: [PATCH] media: qcom: iris: round the encoder frame rate to the
+ nearest integer
+
+iris_venc_s_param() computes the frame rate as denominator / numerator
+with integer division and stores it as whole frames per second, which is
+what is then sent to the firmware as a Q16 value. Fractional rates are
+therefore truncated: 30000/1001 (29.97) becomes 29, 24000/1001 (23.976)
+becomes 23 and 60000/1001 becomes 59. The firmware's rate control sizes
+each frame from bitrate / frame rate, so the stream comes out up to 4%
+over the requested bitrate, and the clock and bandwidth estimates are
+off by the same amount.
+
+Round to the nearest integer, which is within 0.1% for all of the
+common broadcast rates.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_venc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_venc.c b/drivers/media/platform/qcom/iris/iris_venc.c
+index 54764c28a..2a2afa891 100644
+--- a/drivers/media/platform/qcom/iris/iris_venc.c
++++ b/drivers/media/platform/qcom/iris/iris_venc.c
+@@ -442,7 +442,8 @@ int iris_venc_s_param(struct iris_inst *inst, struct v4l2_streamparm *s_parm)
+ 			timeperframe->denominator = default_rate;
+ 	}
+ 
+-	fps = timeperframe->denominator / timeperframe->numerator;
++	/* Round to nearest: 30000/1001 is 30 fps, not the 29 that truncation gives */
++	fps = DIV_ROUND_CLOSEST(timeperframe->denominator, timeperframe->numerator);
+ 	if (!fps)
+ 		return -EINVAL;
+ 
+-- 
+2.43.0
+

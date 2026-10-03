@@ -1,0 +1,48 @@
+From d41df45f629058f68f7122fb93303366f2394386 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:23:22 +0000
+Subject: [PATCH] media: qcom: iris: return queued capture buffers on an early
+ stop_streaming
+
+iris_vb2_stop_streaming() returned immediately for the CAPTURE queue
+when the instance was still in IRIS_INST_INIT, without handing back the
+buffers that vb2 had passed to the driver. The vb2 core then warns about
+buffers still owned by the driver and has to force them to the error
+state itself, leaving the mem2mem ready list pointing at buffers it no
+longer owns until the next STREAMOFF resets it.
+
+There is no firmware activity to undo in this state, so keep skipping
+the session stop, but still return the buffers.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_vb2.c | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_vb2.c b/drivers/media/platform/qcom/iris/iris_vb2.c
+index 13fa5105f..cc56d383b 100644
+--- a/drivers/media/platform/qcom/iris/iris_vb2.c
++++ b/drivers/media/platform/qcom/iris/iris_vb2.c
+@@ -232,8 +232,17 @@ void iris_vb2_stop_streaming(struct vb2_queue *q)
+ 	inst = vb2_get_drv_priv(q);
+ 	iris_wait_for_sys_error(inst->core);
+ 
+-	if (V4L2_TYPE_IS_CAPTURE(q->type) && inst->state == IRIS_INST_INIT)
++	if (V4L2_TYPE_IS_CAPTURE(q->type) && inst->state == IRIS_INST_INIT) {
++		/*
++		 * The firmware session has not started streaming, so there is
++		 * nothing to stop, but vb2 still requires every queued buffer
++		 * to be handed back from stop_streaming().
++		 */
++		mutex_lock(&inst->lock);
++		iris_helper_buffers_done(inst, q->type, VB2_BUF_STATE_ERROR);
++		mutex_unlock(&inst->lock);
+ 		return;
++	}
+ 
+ 	mutex_lock(&inst->lock);
+ 
+-- 
+2.43.0
+

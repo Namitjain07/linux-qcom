@@ -1,0 +1,70 @@
+From 3ca01ac3c367eefd1ce3f6cbad1e8d71c5f00639 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:17:18 +0000
+Subject: [PATCH] media: qcom: iris: fix runtime PM reference leaks in power
+ domain helpers
+
+iris_enable_power_domains() used pm_runtime_get_sync(), which keeps the
+usage count raised when the resume fails and which returns 1 when the
+power domain device was already active. Callers treat any non-zero
+return as an error, so a power domain left active by an earlier failed
+power-down turns every later power-on into a spurious failure while the
+leaked reference keeps the domain from ever being released.
+
+iris_disable_power_domains() returned early when iris_opp_set_rate()
+failed and skipped pm_runtime_put_sync(), leaking the reference taken in
+iris_enable_power_domains().
+
+Use pm_runtime_resume_and_get() when enabling and always drop the
+reference when disabling, reporting the first error.
+
+This is the equivalent of upstream commit f87d7eda07fc ("media: qcom:
+iris: fix runtime PM reference leaks") by Hungyu Lin, adapted to the
+Radxa 7.0.11 tree where the surrounding code differs.
+
+Fixes: bb8a95aa038e ("media: iris: implement power management")
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ .../media/platform/qcom/iris/iris_resources.c   | 17 +++++++----------
+ 1 file changed, 7 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_resources.c b/drivers/media/platform/qcom/iris/iris_resources.c
+index 773f65483..c2c9cc652 100644
+--- a/drivers/media/platform/qcom/iris/iris_resources.c
++++ b/drivers/media/platform/qcom/iris/iris_resources.c
+@@ -78,24 +78,21 @@ int iris_enable_power_domains(struct iris_core *core, struct device *pd_dev)
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = pm_runtime_get_sync(pd_dev);
+-	if (ret < 0)
+-		return ret;
+-
+-	return ret;
++	return pm_runtime_resume_and_get(pd_dev);
+ }
+ 
+ int iris_disable_power_domains(struct iris_core *core, struct device *pd_dev)
+ {
+-	int ret;
++	int ret, pm_ret;
+ 
+ 	ret = iris_opp_set_rate(core->dev, 0);
+-	if (ret)
+-		return ret;
+ 
+-	pm_runtime_put_sync(pd_dev);
++	/* Always drop the reference taken in iris_enable_power_domains() */
++	pm_ret = pm_runtime_put_sync(pd_dev);
++	if (!ret && pm_ret < 0)
++		ret = pm_ret;
+ 
+-	return 0;
++	return ret;
+ }
+ 
+ static struct clk *iris_get_clk_by_type(struct iris_core *core, enum platform_clk_type clk_type)
+-- 
+2.43.0
+

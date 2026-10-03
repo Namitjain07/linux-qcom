@@ -1,0 +1,75 @@
+sha	date	author	subject
+38befa2de	2026-08-18	Vishnu Reddy	media: iris: Fix frame interval enumeration for non-divisor framerates
+f50b9f96c	2026-08-18	Vishnu Reddy	media: iris: Fix power-off ordering to disable power domain after clocks
+921f79c41	2026-07-10	Gourav Kumar	media: iris: disable time-delta-based rate control for VBR
+55e5ed133	2026-07-10	Vishnu Reddy	media: iris: avoid bit depth validation for capture formats
+395349af3	2025-08-06	Stephan Gerhold	media: iris: Port firmware loading without TZ/PAS from venus
+cb13f7a5f	2026-09-08	Xilin Wu	media: iris: Add deblocking filter controls for HFI gen2
+db2bdd1b1	2026-09-08	Xilin Wu	media: iris: allow larger capture buffer pools on HFI gen2
+3934e935b	2026-09-08	Xilin Wu	media: iris: support decode-order output on HFI gen2
+6198771c7	2026-08-12	Junhao Xie	media: iris: wait for teardown before releasing sessions
+4e94efbb5	2026-08-12	Junhao Xie	media: iris: serialize system error teardown
+96982befa	2026-08-12	Junhao Xie	media: iris: harden core initialization state handling
+a5ca5d13e	2026-08-12	Junhao Xie	media: iris: synchronize IRQ before freeing HFI queues
+fe41e5e55	2026-08-12	Junhao Xie	media: iris: defer Gen2 DPB buffer destruction
+b71f2586a	2026-08-12	Junhao Xie	media: iris: wrap timestamp metadata index after storing
+63d9ee1ce	2026-08-12	Dmitry Baryshkov	media: iris: account for UBWC extradata in QC08C buffers
+038eff48c	2026-08-06	Junhao Xie	media: iris: prepend encoder headers on SC8280XP
+d655943bf	2026-08-06	Junhao Xie	media: iris: guard empty Gen2 drain packet
+2ac17acf5	2026-08-04	Junhao Xie	media: iris: fix encoder selection for padded NV12
+d5cdbbdaa	2026-08-04	Junhao Xie	media: iris: harden failed session buffer cleanup
+4fef0d63f	2026-08-03	Junhao Xie	media: iris: support force key frame requests on encoders
+08282c7c5	2026-08-02	Junhao Xie	media: iris: separate encoder frame size from buffer layout
+87c604bff	2026-08-02	Junhao Xie	media: iris: restrict gen1 encoders to joined headers
+5d3934d3d	2026-06-07	Xilin Wu	media: qcom: iris: allocate partial decode buffer only for AV1
+84032bd73	2026-06-07	Xilin Wu	media: qcom: iris: align HEVC decoder internal buffer sizes
+595c088c7	2026-06-07	Xilin Wu	media: qcom: iris: print firmware SFR message on system error
+b1b0ecd97	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: allow GEN2 decoding into 10bit format
+126450330	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: update find_format to handle 8bit and 10bit formats
+b27b7b56b	2026-06-02	Neil Armstrong	media: qcom: iris: vdec: update size and stride calculations for 10bit formats
+9a6627361	2026-06-02	Neil Armstrong	media: qcom: iris: gen2: add support for 10bit decoding
+30ab05591	2026-06-02	Neil Armstrong	media: qcom: iris: add QC10C & P010 buffer size calculations
+ad03b3cf7	2026-06-02	Neil Armstrong	media: qcom: iris: add helpers for 8bit and 10bit formats
+a7af21cbb	2026-05-29	Dmitry Baryshkov	media: iris: drop struct iris_fmt
+fb6b5b4d8	2026-06-02	Bryan O'Donoghue	media: iris: Fix FPS calculation and VPP FW overhead
+764b9bb72	2026-06-03	Xilin Wu	media: iris: Add SC8280XP platform data
+9c962d3aa	2026-05-29	Dikshita Agarwal	media: iris: Add Gen2 firmware autodetect and fallback
+9b7653cf1	2026-05-29	Dikshita Agarwal	media: iris: Initialize HFI ops after firmware load in core init
+ff7ac0b3c	2026-05-29	Wangao Wang	media: iris: Add platform data for X1P42100
+0834fb169	2026-05-29	Wangao Wang	media: iris: Add hardware power on/off ops for X1P42100
+e374baab3	2026-05-14	Vishnu Reddy	media: iris: optimize COMV buffer allocation for VPU3x and VPU4x
+f39bbefa5	2026-04-01	Vishnu Reddy	media: iris: add FPS calculation and VPP FW overhead in frequency formula
+caf913fd9	2026-05-12	Wangao Wang	media: qcom: iris: Simplify COMV size calculation
+0126e6fab	2026-05-12	Wangao Wang	media: qcom: iris: Optimize iris_hfi_gen1_packet_session_set_property
+0a5c4efcf	2026-05-12	Wangao Wang	media: qcom: iris: Add hierarchical coding support for encoder
+7cdfcde1b	2026-05-12	Wangao Wang	media: qcom: iris: Add B frames support for encoder
+4852332fb	2026-05-12	Wangao Wang	media: qcom: iris: Add Long-Term Reference support for encoder
+60b252e0a	2026-05-12	Wangao Wang	media: qcom: iris: Add intra refresh support for gen1 encoder
+806365f5d	2026-05-29	Dmitry Baryshkov	media: iris: Fix use IRQF_NO_AUTOEN when requesting the IRQ
+6f3d0f392	2026-03-29	Dmitry Baryshkov	media: qcom: iris: extract firmware description data
+47f56394c	2026-03-29	Dmitry Baryshkov	media: qcom: iris: use new firmware name for SM8250
+773bcc4a2	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split platform data from firmware data
+4ce3665cd	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split firmware_data from raw platform data
+715cf698c	2026-03-29	Dmitry Baryshkov	media: qcom: iris: drop hw_response_timeout_val from platform data
+8cd3f58aa	2026-03-29	Dmitry Baryshkov	media: qcom: iris: move get_instance to iris_hfi_sys_ops
+3ba7c6d06	2026-03-29	Dmitry Baryshkov	media: qcom: iris: merge hfi_response_ops and hfi_command_ops
+89cdd0486	2026-03-29	Dmitry Baryshkov	media: qcom: iris: split HFI session ops from core ops
+b127bb092	2026-03-29	Dmitry Baryshkov	media: qcom: iris: don't use function indirection in gen2-specific code
+be0463092	2026-03-29	Dmitry Baryshkov	media: qcom: iris: use common set_preset_registers function
+a0dc7b02a	2026-03-29	Dmitry Baryshkov	media: qcom: iris: drop pas_id from the iris_platform_data struct
+84cad8ddb	2026-01-25	Dmitry Baryshkov	media: iris: drop remnants of UBWC configuration
+0b480b6bb	2026-01-25	Dmitry Baryshkov	media: iris: don't specify max_channels in the source code
+642225221	2026-01-25	Dmitry Baryshkov	media: iris: don't specify bank_spreading in the source code
+7de0fd23a	2026-01-25	Dmitry Baryshkov	media: iris: don't specify ubwc_swizzle in the source code
+1f1502044	2026-01-25	Dmitry Baryshkov	media: iris: don't specify highest_bank_bit in the source code
+55abe8821	2026-01-25	Dmitry Baryshkov	media: iris: don't specify min_acc_length in the source code
+92c2c5556	2026-01-25	Dmitry Baryshkov	media: iris: retrieve UBWC platform configuration
+55ee57c12	2026-03-27	Dmitry Baryshkov	media: qcom: venus: flip the venus/iris switch
+c89ff6e7d	2026-02-09	Dmitry Baryshkov	media: iris: scale MMCX power domain on SM8250
+6fb1a2768	2026-03-13	Vikash Garodia	media: iris: switch to hardware mode after firmware boot
+494ffd171	2026-03-05	Vishnu Reddy	media: iris: fix use-after-free of fmt_src during MBPF check
+c7c469127	2026-02-13	Thomas Fourier	media: iris: Fix dma_free_attrs() size in iris_hfi_queues_init()
+169185f94	2026-03-27	Dmitry Baryshkov	media: qcom: iris: increase H265D_MAX_SLICE to fix H.265 decoding on SC7280
+18c64439f	2026-02-16	Dikshita Agarwal	media: iris: Fix use-after-free in iris_release_internal_buffers()
+2ed65808d	2026-02-05	Arnd Bergmann	media: iris: fix QCOM_MDT_LOADER dependency
+fc9eae25e	2026-03-29	Linus Torvalds	Merge tag 'phy-fixes-7.0' of git://git.kernel.org/pub/scm/linux/kernel/git/phy/linux-phy

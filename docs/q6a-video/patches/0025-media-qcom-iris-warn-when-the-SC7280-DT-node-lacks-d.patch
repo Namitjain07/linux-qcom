@@ -1,0 +1,57 @@
+From e33a87d7e74d46cd0b4ccca4554cf485b60bd2e3 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:28:56 +0000
+Subject: [PATCH] media: qcom: iris: warn when the SC7280 DT node lacks
+ dma-coherent
+
+On SC7280/QCS6490 ("kodiak") the video block is I/O coherent. Qualcomm
+fixed corrupted video output on this SoC by adding "dma-coherent" to the
+video-codec node of kodiak.dtsi. Device trees that predate that change,
+and boards that carry their own copy of the node, still lack the
+property: the driver then probes and appears to work, but frames are
+corrupted in a way that depends on cache state, which is very hard to
+tell apart from a firmware or encoder bug.
+
+Print a warning at probe time for the sc7280 compatible when the
+property is missing, naming the symptom, so the cause is visible in
+dmesg.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_probe.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_probe.c b/drivers/media/platform/qcom/iris/iris_probe.c
+index d073be4fa..8051c64bd 100644
+--- a/drivers/media/platform/qcom/iris/iris_probe.c
++++ b/drivers/media/platform/qcom/iris/iris_probe.c
+@@ -6,6 +6,8 @@
+ #include <linux/clk.h>
+ #include <linux/interconnect.h>
+ #include <linux/module.h>
++#include <linux/of_address.h>
++#include <linux/of_device.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_opp.h>
+ #include <linux/pm_runtime.h>
+@@ -294,6 +296,16 @@ static int iris_probe(struct platform_device *pdev)
+ 	dma_set_max_seg_size(&pdev->dev, DMA_BIT_MASK(32));
+ 	dma_set_seg_boundary(&pdev->dev, DMA_BIT_MASK(32));
+ 
++	/*
++	 * The SC7280 VPU is I/O coherent. If the node lacks "dma-coherent" the
++	 * kernel maps the shared buffers with attributes that do not match what
++	 * the hardware uses and the encoder reads, or the decoder writes,
++	 * stale or corrupted frames.
++	 */
++	if (of_device_is_compatible(dev->of_node, "qcom,sc7280-venus") &&
++	    !of_dma_is_coherent(dev->of_node))
++		dev_warn(dev, "DT node has no \"dma-coherent\": video data may be corrupted\n");
++
+ 	pm_runtime_set_autosuspend_delay(core->dev, AUTOSUSPEND_DELAY_VALUE);
+ 	pm_runtime_use_autosuspend(core->dev);
+ 	ret = devm_pm_runtime_enable(core->dev);
+-- 
+2.43.0
+

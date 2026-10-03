@@ -1,0 +1,96 @@
+From e33a87d7e74d46cd0b4ccca4554cf485b60bd2e3 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:37:23 +0000
+Subject: [PATCH] media: iris, venus: fixes for hardware video encode on QCS6490 / Radxa Dragon Q6A
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Series for Radxa linux-7.0.11 (base a50eb5b71). Details, root causes,
+evidence and the test plan: docs/q6a-video/FIXES.md in the linux-qcom repo.
+
+ 1-4   Iris: upstream fixes missing from 7.0.11 (cherry-picked, authorship kept)
+ 5-8   Venus: upstream parser and encoder-step fixes (cherry-picked)
+ 9-12  Iris: runtime-PM / clock-unwind / command-queue bugs
+ 13    Iris: keep the IRQ thread off the registers after power-off
+       (replaces upstream b9c2215bdedc, which can deadlock on this tree)
+ 14-17 Iris: teardown / open() error handling
+ 18-21 Iris encoder: frame size, crop/selection, frame rate
+ 22-25 Iris: firmware detection, diagnostics, probe order, DMA warning
+
+Status: every commit builds with clang 18 (LLVM=1, arm64, W=1, no warnings) with
+Iris built as a module, and the Venus patches also with CONFIG_VIDEO_QCOM_IRIS=n;
+checkpatch is clean apart from the trailers; the clang static analyzer reports
+nothing on the touched files; three of the bugs are reproduced and shown fixed
+with user-space replays (docs/q6a-video/tests). NOTHING HAS BEEN RUN ON
+HARDWARE. The submitter needs to add Signed-off-by before sending upstream.
+
+Bryan O'Donoghue (1):
+  media: iris: Enumerate cap->bus_info to differentiate between encoder
+    and decoder
+
+Claude (17):
+  media: qcom: iris: fix runtime PM reference leaks in power domain
+    helpers
+  media: qcom: iris: fix clock unwind in iris_vpu_power_on_hw()
+  media: qcom: iris: don't drop a runtime PM reference that was never
+    taken
+  media: qcom: iris: treat a completely full HFI command queue as full
+  media: qcom: iris: keep the IRQ thread off the registers once power is
+    off
+  media: qcom: iris: handle runtime PM resume failure in core deinit
+  media: qcom: iris: bound the wait for system error recovery
+  media: qcom: iris: return queued capture buffers on an early
+    stop_streaming
+  media: qcom: iris: fix error handling when opening a video node
+  media: qcom: iris: validate the encoder frame size in try_fmt
+  media: qcom: iris: make encoder crop selection consistent
+  media: qcom: iris: round the encoder frame rate to the nearest integer
+  media: qcom: iris: don't memcpy a format onto itself in the encoder
+  media: qcom: iris: don't read past the end of the firmware when
+    detecting Gen2
+  media: qcom: iris: say why the firmware could not be loaded
+  media: qcom: iris: publish the video nodes only once the device is
+    usable
+  media: qcom: iris: warn when the SC7280 DT node lacks dma-coherent
+
+Dikshita Agarwal (2):
+  media: qcom: iris: Fix bitmask test in iris_allow_cmd()
+  media: qcom: iris: fix state-change debug log printing stale value
+
+Mohammed EL Kadiri (2):
+  media: venus: fix payload size calculation in parse_raw_formats()
+  media: venus: fix payload size returned by parse_caps() and
+    parse_alloc_mode()
+
+Renjiang Han (2):
+  media: qcom: venus: relax encoder frame/blur step size on v6
+  media: qcom: venus: relax encoder frame/blur dimension steps on v4
+
+Wangao Wang (1):
+  media: qcom: iris: fix missing hfi_id in gen1 GOP_SIZE cap
+
+ drivers/media/platform/qcom/iris/iris_core.c  | 28 ++++++--
+ drivers/media/platform/qcom/iris/iris_core.h  |  4 ++
+ drivers/media/platform/qcom/iris/iris_ctrls.c |  2 +-
+ .../media/platform/qcom/iris/iris_firmware.c  | 16 ++++-
+ .../platform/qcom/iris/iris_hfi_common.c      | 21 ++++--
+ .../media/platform/qcom/iris/iris_hfi_gen1.c  | 16 ++---
+ .../media/platform/qcom/iris/iris_hfi_queue.c | 23 +++---
+ .../platform/qcom/iris/iris_platform_common.h |  1 -
+ drivers/media/platform/qcom/iris/iris_probe.c | 57 ++++++++++-----
+ .../media/platform/qcom/iris/iris_resources.c | 17 ++---
+ drivers/media/platform/qcom/iris/iris_state.c |  4 +-
+ drivers/media/platform/qcom/iris/iris_vb2.c   | 11 ++-
+ drivers/media/platform/qcom/iris/iris_vdec.c  | 17 ++++-
+ drivers/media/platform/qcom/iris/iris_venc.c  | 72 +++++++++++++++----
+ drivers/media/platform/qcom/iris/iris_vidc.c  | 33 +++++++--
+ .../platform/qcom/iris/iris_vpu_common.c      | 21 +++++-
+ .../media/platform/qcom/venus/hfi_parser.c    |  9 ++-
+ .../platform/qcom/venus/hfi_platform_v4.c     | 20 +++---
+ .../platform/qcom/venus/hfi_platform_v6.c     | 16 ++---
+ 19 files changed, 273 insertions(+), 115 deletions(-)
+
+-- 
+2.43.0
+

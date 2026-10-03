@@ -1,0 +1,47 @@
+From 57d040a4c99e61a81fda0131dbb341f8156ffe7f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:27:45 +0000
+Subject: [PATCH] media: qcom: iris: say why the firmware could not be loaded
+
+The most common reason for the VPU not coming up on a board with a
+non-default firmware is a mismatch between the image and the reserved
+memory region the device tree gives it: a Gen2 image needs 0x700000
+bytes of memory, a Gen1 image 0x500000. iris_load_fw_to_memory() failed
+that check with a bare -EINVAL and no message, so the only trace was
+the generic "firmware download failed -22".
+
+Print the image name, its size in memory and the size of the region when
+it does not fit, and print which HFI generation was detected and how
+much of the region is used when it does, so a wrong or mis-sized
+firmware is recognisable from the log without a debugger.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_firmware.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_firmware.c b/drivers/media/platform/qcom/iris/iris_firmware.c
+index af178a438..f4ba2d188 100644
+--- a/drivers/media/platform/qcom/iris/iris_firmware.c
++++ b/drivers/media/platform/qcom/iris/iris_firmware.c
+@@ -163,10 +163,16 @@ static int iris_load_fw_to_memory(struct iris_core *core)
+ 
+ 	fw_size = qcom_mdt_get_size(firmware);
+ 	if (fw_size < 0 || res_size < (size_t)fw_size) {
++		dev_err(dev, "firmware %s needs %zd bytes but the reserved memory region has %zu\n",
++			fw_name, fw_size, res_size);
+ 		ret = -EINVAL;
+ 		goto err_release_fw;
+ 	}
+ 
++	dev_info(dev, "firmware %s: %s HFI, %zd of %zu bytes of reserved memory\n", fw_name,
++		 core->iris_firmware_data == &iris_hfi_gen2_data ? "Gen2" : "Gen1",
++		 fw_size, res_size);
++
+ 	mem_virt = memremap(mem_phys, res_size, MEMREMAP_WC);
+ 	if (!mem_virt) {
+ 		ret = -ENOMEM;
+-- 
+2.43.0
+

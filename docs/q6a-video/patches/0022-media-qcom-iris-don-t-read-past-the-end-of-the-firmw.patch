@@ -1,0 +1,47 @@
+From 65daae492db9bf8cac1ebc0f3d20e5dd585af589 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:27:45 +0000
+Subject: [PATCH] media: qcom: iris: don't read past the end of the firmware
+ when detecting Gen2
+
+iris_detect_gen2_from_fwdata() scans the image for the
+QC_IMAGE_VERSION_STRING= marker and then strscpy()s up to 63 bytes from
+behind it. If the marker is at the very end of a truncated or corrupt
+file and the string is not terminated, the copy reads beyond the end of
+the firmware buffer.
+
+A genuine image never looks like this, but the file comes from
+/lib/firmware, so bound the copy by what is left in the buffer.
+
+A user-space replay of the function with the blob placed against an
+inaccessible guard page faults before this change and detects the
+generation correctly after it, including a marker that ends exactly at
+the end of the image.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_firmware.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_firmware.c b/drivers/media/platform/qcom/iris/iris_firmware.c
+index 1b8334586..af178a438 100644
+--- a/drivers/media/platform/qcom/iris/iris_firmware.c
++++ b/drivers/media/platform/qcom/iris/iris_firmware.c
+@@ -36,9 +36,11 @@ static bool iris_detect_gen2_from_fwdata(const u8 *data, size_t size)
+ 	max = (size > mlen) ? size - mlen : 0;
+ 	for (size_t i = 0; i < max; i++) {
+ 		if (!memcmp(data + i, marker, mlen)) {
+-			const char *found = (const char *)(data + i + mlen);
++			size_t avail = min(sizeof(version_buf) - 1, size - (i + mlen));
+ 
+-			strscpy(version_buf, found, sizeof(version_buf));
++			/* The string may sit at the very end of the blob: never read past it */
++			memcpy(version_buf, data + i + mlen, avail);
++			version_buf[avail] = '\0';
+ 			if (!strncmp(version_buf, "vfw", 3))
+ 				return true;
+ 			if (sscanf(version_buf, "video-firmware.%d.%d", &major, &minor) == 2 &&
+-- 
+2.43.0
+

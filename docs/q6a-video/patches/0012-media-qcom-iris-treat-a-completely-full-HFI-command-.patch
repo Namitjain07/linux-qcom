@@ -1,0 +1,50 @@
+From 3525d2dfd66ec501cd008f815c5e7988e170da6a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 3 Oct 2026 02:20:39 +0000
+Subject: [PATCH] media: qcom: iris: treat a completely full HFI command queue
+ as full
+
+iris_hfi_queue_write() accepted a packet when it exactly fitted into the
+free space. The shared queue uses read_idx == write_idx to mean "empty",
+so a packet that fills the queue to the last byte moves write_idx onto
+read_idx. The driver reports success and raises the interrupt, but the
+firmware sees an empty queue and never processes the packet. The next
+write then sees a fully empty queue and starts overwriting the packets
+that were never consumed.
+
+Reject the write unless there is strictly more free space than the
+packet needs, which is what the Venus HFI queue code does.
+
+A user-space replay of the function (scaled to an 8 KiB queue with
+1 KiB packets) shows the 8th packet being accepted with
+write_idx == read_idx before this change, and -ENOSPC after it.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01XHbRyvZ53xawh6pBdmacMe
+---
+ drivers/media/platform/qcom/iris/iris_hfi_queue.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/qcom/iris/iris_hfi_queue.c b/drivers/media/platform/qcom/iris/iris_hfi_queue.c
+index 60354964e..ae6c2d359 100644
+--- a/drivers/media/platform/qcom/iris/iris_hfi_queue.c
++++ b/drivers/media/platform/qcom/iris/iris_hfi_queue.c
+@@ -21,7 +21,14 @@ static int iris_hfi_queue_write(struct iris_iface_q_info *qinfo, void *packet, u
+ 		empty_space = read_idx - write_idx;
+ 	else
+ 		empty_space = IFACEQ_QUEUE_SIZE - (write_idx -  read_idx);
+-	if (empty_space < packet_size)
++
++	/*
++	 * read_idx == write_idx means "empty". A packet that fills the queue
++	 * completely would make the write index catch up with the read index
++	 * and the firmware would see an empty queue, so one slot is always
++	 * kept free.
++	 */
++	if (empty_space <= packet_size)
+ 		return -ENOSPC;
+ 
+ 	queue->tx_req =  0;
+-- 
+2.43.0
+
