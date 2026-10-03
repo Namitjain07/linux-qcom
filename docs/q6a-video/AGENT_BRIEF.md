@@ -1,5 +1,7 @@
 # Agent brief — paste this into your agent (or point it at this file)
 
+> Verifying/installing the **driver fix series** is a separate task with its own self-contained brief: [`AGENT_PROMPT_VERIFY_FIXES.md`](AGENT_PROMPT_VERIFY_FIXES.md).
+
 You are helping bring up **hardware video encoding (and scaling)** on a **Radxa Dragon Q6A** (Qualcomm QCS6490, "SC7280/kodiak"). You can reach the board over SSH (and possibly a serial console). A research bundle with the diagnosis, plan, runbook and tools is in this repository:
 
 ```

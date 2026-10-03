@@ -2,7 +2,7 @@
 
 Everything needed to diagnose and fix hardware video encoding on the Radxa Dragon Q6A, written so a human **or an AI agent with access to the board** can execute it.
 
-**Start here → give your agent [`AGENT_BRIEF.md`](AGENT_BRIEF.md).** It tells the agent what to read, what it may and may not do, and what to return.
+**Start here → give your agent [`AGENT_BRIEF.md`](AGENT_BRIEF.md)** (bring-up on the stock kernel). To have it **verify, install and test the driver fix series**, give it [`AGENT_PROMPT_VERIFY_FIXES.md`](AGENT_PROMPT_VERIFY_FIXES.md) instead (or after) — it is self-contained and carries the full context. Both tell the agent what to read, what it may and may not do, and what to return.
 
 ## TL;DR
 - **Recommended way:** Radxa `linux-7.0.11` (what this repo builds) + **Iris** driver + Gen2 firmware `qcom/vpu/vpu20_p1_gen2_s6.mbn` + **Hypervisor Override (EL2) enabled in UEFI**. This is the configuration Radxa's merged PRs #593/#607 target for QCS6490, and EL2 avoids a documented secure-stream-ID crash class that can reset the board during encode in TrustZone mode.
@@ -15,6 +15,7 @@ Everything needed to diagnose and fix hardware video encoding on the Radxa Drago
 | File | What it is |
 |---|---|
 | [`AGENT_BRIEF.md`](AGENT_BRIEF.md) | Paste-ready brief: role, rules of engagement, workflow, return format |
+| [`AGENT_PROMPT_VERIFY_FIXES.md`](AGENT_PROMPT_VERIFY_FIXES.md) | **New.** Self-contained prompt + context to verify the 25-patch series, install the patched module safely, test it on the board and return a per-patch verdict |
 | [`PLAN.md`](PLAN.md) | Phased plan with success criteria, authority tiers, gates, rollback, decision tree, risks |
 | [`GUIDE.md`](GUIDE.md) | Copy-paste runbook (setup, firmware, EL2, probes, encode matrix, stability, scaling, symptom table, results template) |
 | [`REPORT.md`](REPORT.md) | The research: findings, ranked causes, recommendation, corrections, open questions |
